@@ -170,10 +170,11 @@
 <body>
   <div class="container">
     <nav class="nav">
-      <a href="{% url 'dashboard' %}">Dashboard</a>
-      <a href="{% url 'monitoring_mode' %}">Monitoring Mode</a>
-      <a href="{% url 'network_dashboard' %}">Network</a>
-      <a href="{% url 'cctv_dashboard' %}">CCTV</a>
+      <a href="{% url 'dashboard' %}" class="{% if active_nav == 'dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="{% url 'monitoring_mode' %}" class="{% if active_nav == 'monitoring' %}active{% endif %}">Monitoring Mode</a>
+      <a href="{% url 'network_dashboard' %}" class="{% if active_nav == 'network' %}active{% endif %}">Network</a>
+      <a href="{% url 'cctv_dashboard' %}" class="{% if active_nav == 'cctv' %}active{% endif %}">CCTV</a>
+      <a href="{% url 'ssl_certificates_list' %}" class="{% if active_nav == 'ssl' %}active{% endif %}">SSL</a>
       <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
           {% csrf_token %}
       </form>

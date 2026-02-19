@@ -161,7 +161,7 @@ class MonitoringConsumer(AsyncJsonWebsocketConsumer):
         for event in AlertEvent.objects.select_related('server', 'rule').order_by("-created_at")[:20]:
             events.append({
                 "id": event.id,
-                "server_name": event.server.name,
+                "server_name": event.server.name if event.server else "System",
                 "title": event.title,
                 "severity": event.severity,
                 "created_at": event.created_at.isoformat(),

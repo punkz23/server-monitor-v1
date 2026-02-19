@@ -25,12 +25,13 @@ SECRET_KEY = 'django-insecure-31g8r+yrqm&h@0v(t&xuw*63+$###w48u2hyjtqkw@dz+#-n3w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["58.69.221.127", "192.168.253.23", "123.253.137.132", "localhost", "127.0.0.1", "0.0.0.0", "*"]
+ALLOWED_HOSTS = ["58.69.221.127", "192.168.253.23", "192.168.253.31", "123.253.137.132", "localhost", "127.0.0.1", "0.0.0.0", "*"]
 
 # Also add CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     'http://123.253.137.132:8001',
     'http://192.168.253.23:8001',
+    'http://192.168.253.31:8001',
     'http://58.69.221.127:8001',
 ]
 # Application definition
@@ -180,7 +181,7 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ServerWatch Configuration
-SERVERWATCH_SERVER_HOST = '192.168.253.23'
+SERVERWATCH_SERVER_HOST = '192.168.253.31'
 SERVERWATCH_SERVER_PORT = 8001
 SERVERWATCH_SERVER_URL = f'http://{SERVERWATCH_SERVER_HOST}:{SERVERWATCH_SERVER_PORT}'
 

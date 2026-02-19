@@ -195,7 +195,10 @@ def _evaluate_rule(rule: AlertRule, server: Server, now: datetime, channel_layer
             )
         
         # Send notification
-        channels = rule.notification_channels or ['console']
+        channels = list(rule.notification_channels) if rule.notification_channels else ['console']
+        if 'push' not in channels:
+            channels.append('push')
+            
         subject = f"ALERT: {fired_evt.title} on {server.name}"
         message = f"Severity: {fired_evt.severity}\nMessage: {fired_evt.message}\nValue: {fired_evt.value}"
         notification_service.send_notification(channels, "admin", subject, message)
@@ -210,7 +213,10 @@ def _evaluate_rule(rule: AlertRule, server: Server, now: datetime, channel_layer
             )
         
         # Send notification
-        channels = rule.notification_channels or ['console']
+        channels = list(rule.notification_channels) if rule.notification_channels else ['console']
+        if 'push' not in channels:
+            channels.append('push')
+            
         subject = f"RECOVERY: {recovered_evt.title} on {server.name}"
         message = f"Severity: {recovered_evt.severity}\nMessage: {recovered_evt.message}\nValue: {recovered_evt.value}"
         notification_service.send_notification(channels, "admin", subject, message)

@@ -1,0 +1,157 @@
+{% extends "monitor/base.html" %}
+{% load static %}
+{% load tz %}
+
+{% block title %}SSL Certificates - ServerWatch{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ssl-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .ssl-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+    .ssl-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--accent);
+    }
+    .ssl-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+    }
+    .ssl-domain {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+    .ssl-server {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+    .ssl-status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .ssl-status-good { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .ssl-status-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .ssl-status-critical { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .ssl-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        font-size: 0.85rem;
+    }
+    .detail-label {
+        color: var(--text-muted);
+        margin-bottom: 2px;
+    }
+    .detail-value {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    .expiry-progress {
+        grid-column: span 2;
+        height: 6px;
+        background: var(--bg-tertiary);
+        border-radius: 3px;
+        margin-top: 10px;
+        overflow: hidden;
+    }
+    .progress-bar {
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>SSL Certificates</h1>
+    <button class="btn btn-primary" onclick="refreshCerts()">
+        <i class="fas fa-sync-alt mr-2"></i> Refresh All
+    </button>
+</div>
+
+<div class="ssl-card-grid">
+    {% for cert in certificates %}
+    <div class="ssl-card">
+        <div class="ssl-header">
+            <div>
+                <div class="ssl-domain">{{ cert.domain }}</div>
+                <div class="ssl-server">
+                    <i class="fas fa-server mr-1"></i> 
+                    {% if cert.server %}
+                        {{ cert.server.name }} ({{ cert.server.ip_address }})
+                    {% else %}
+                        No associated server
+                    {% endif %}
+                </div>
+            </div>
+            <span class="ssl-status-badge ssl-status-{{ cert.status_color_name }}">
+                {{ cert.days_until_expiry }} days
+            </span>
+        </div>
+        
+        <div class="ssl-details">
+            <div>
+                <div class="detail-label">Issuer</div>
+                <div class="detail-value text-truncate" title="{{ cert.issuer }}">{{ cert.issuer|default:"Unknown" }}</div>
+            </div>
+            <div>
+                <div class="detail-label">Expires</div>
+                <div class="detail-value">{{ cert.expires_at|date:"M d, Y" }}</div>
+            </div>
+            <div class="expiry-progress">
+                <div class="progress-bar {% if cert.days_until_expiry < 7 %}bg-danger{% elif cert.days_until_expiry < 30 %}bg-warning{% else %}bg-success{% endif %}" 
+                     style="width: {{ cert.percent_remaining }}%"></div>
+            </div>
+            <div style="grid-column: span 2; margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.75rem;">
+                <span class="text-muted">Last checked: {{ cert.last_checked|timesince }} ago</span>
+                {% if cert.server %}
+                    <a href="{% url 'server_detail' cert.server.id %}" class="text-accent">View Server</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 50px; background: var(--card-bg); border-radius: 12px; border: 1px dashed var(--border);">
+        <i class="fas fa-shield-alt fa-3x mb-3 text-muted"></i>
+        <h3>No Certificates Monitored</h3>
+        <p class="text-muted">Certificates will appear here once they are discovered on your web servers.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    async function refreshCerts() {
+        const btn = event.currentTarget;
+        const icon = btn.querySelector('i');
+        icon.classList.add('fa-spin');
+        btn.disabled = true;
+        
+        try {
+            // We'll trigger a status check for all servers to refresh SSL
+            const response = await fetch('/api/cctv/check-all/'); // Reusing a trigger or we can create a specific one
+            location.reload();
+        } catch (error) {
+            console.error('Error refreshing:', error);
+            icon.classList.remove('fa-spin');
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}

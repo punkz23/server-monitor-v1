@@ -396,6 +396,13 @@ class Server(models.Model):
         help_text="Comma-separated list of directories to monitor"
     )
 
+    ssl_cert_path = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Path to SSL certificate file on the server (for SSH-based monitoring)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -458,7 +465,10 @@ class ResourceSample(models.Model):
 
     class Meta:
         ordering = ["-collected_at"]
-        indexes = [models.Index(fields=["server", "collected_at"])]
+        indexes = [
+            models.Index(fields=["server", "collected_at"]),
+            models.Index(fields=["collected_at"]),
+        ]
 
 
 class AlertRule(models.Model):
@@ -747,6 +757,14 @@ class DeviceBandwidthMeasurement(models.Model):
 
 class SSLCertificate(models.Model):
     """Model for SSL/TLS certificate monitoring"""
+    server = models.ForeignKey(
+        'Server',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ssl_certificates_list',
+        help_text="Associated server for this certificate"
+    )
     name = models.CharField(max_length=200, help_text="Certificate name or domain")
     domain = models.CharField(max_length=255, help_text="Primary domain")
     alternative_names = models.JSONField(default=list, help_text="SAN domains")
@@ -915,6 +933,29 @@ class SSLCertificate(models.Model):
             return f'Expires in {self.days_until_expiry} days (WARNING)'
         else:
             return f'Valid for {self.days_until_expiry} days'
+
+    @property
+    def status_color_name(self):
+        """Get status color name for CSS classes"""
+        if not self.is_valid or self.days_until_expiry <= self.critical_days:
+            return 'critical'
+        elif self.days_until_expiry <= self.warning_days:
+            return 'warning'
+        else:
+            return 'good'
+
+    @property
+    def percent_remaining(self):
+        """Calculate percentage of life remaining (capped at 100)"""
+        if self.days_until_expiry <= 0: return 0
+        # Assume a standard 90 day cert life for progress bar if issued_at is missing
+        total_days = 90
+        if self.issued_at and self.expires_at:
+            total_days = (self.expires_at - self.issued_at).days
+        
+        if total_days <= 0: return 0
+        percent = (self.days_until_expiry / total_days) * 100
+        return min(100, max(0, percent))
 
 
 class CCTVDevice(models.Model):

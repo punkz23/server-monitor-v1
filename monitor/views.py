@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
 import csv
 from io import StringIO
 from reportlab.lib.pagesizes import letter, A4
@@ -157,68 +158,14 @@ def dashboard(request):
         # Cache for 1 minute
         cache.set(cache_key, {'servers_by_type': servers_by_type, 'servers': servers}, 60)
     
-    # Load SSH metrics (already has its own caching logic)
+    # Load SSH metrics from cache ONLY (Do not initiate network checks in view)
     server_metrics = {}
     try:
-        # ... (existing metrics loading logic)
         from django.core.cache import cache
-        from .services.metrics_monitor_service import MetricsMonitorService
-        
-        # Check cache first
         cache_key = "dashboard_metrics"
-        cached_metrics = cache.get(cache_key)
-        
-        if cached_metrics:
-            server_metrics = cached_metrics
-        else:
-            from .models_ssh_credentials import SSHCredential
-            
-            # Get servers with SSH credentials in one query
-            servers_with_ssh = [s for s in servers if hasattr(s, 'ssh_credential') and s.ssh_credential and s.ssh_credential.is_active]
-            
-            # Initialize metrics service
-            monitor = MetricsMonitorService()
-            
-            # Pre-load credentials
-            for server in servers_with_ssh:
-                if hasattr(server, 'ssh_credential') and server.ssh_credential:
-                    monitor.ssh_credentials[server.ip_address] = {
-                        'username': server.ssh_credential.username,
-                        'password': server.ssh_credential.get_password(),
-                        'port': server.ssh_credential.port
-                    }
-            
-            # Collect metrics with timeout handling
-            import concurrent.futures
-            import threading
-            
-            def get_server_metrics(server):
-                try:
-                    metrics_data = monitor.get_comprehensive_metrics(server.ip_address)
-                    if 'error' not in metrics_data:
-                        return server.id, metrics_data['current']
-                    else:
-                        return server.id, {'error': metrics_data['error']}
-                except Exception as e:
-                    logger.error(f"Error loading metrics for {server.name}: {e}")
-                    return server.id, {'error': str(e)}
-            
-            # Use thread pool for concurrent SSH connections
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                future_to_server = {
-                    executor.submit(get_server_metrics, server): server 
-                    for server in servers_with_ssh
-                }
-                
-                for future in concurrent.futures.as_completed(future_to_server, timeout=30):
-                    server_id, metrics = future.result()
-                    server_metrics[server_id] = metrics
-            
-            # Cache metrics for 5 minutes
-            cache.set(cache_key, server_metrics, 300)
-                
+        server_metrics = cache.get(cache_key, {})
     except Exception as e:
-        logger.error(f"Error in dashboard metrics loading: {e}")
+        logger.error(f"Error in dashboard metrics cache loading: {e}")
     
     # Add metrics to server objects
     for server in servers:
@@ -246,6 +193,19 @@ def dashboard(request):
         "servers_by_type": servers_by_type,
         "ssl_certificates": ssl_certificates,
         "ssl_summary": ssl_summary,
+        "active_nav": "dashboard",
+    })
+
+
+@login_required
+def ssl_certificates_list(request):
+    """View to list all monitored SSL certificates"""
+    from .models import SSLCertificate
+    certificates = SSLCertificate.objects.filter(enabled=True).select_related('server').order_by('expires_at')
+    
+    return render(request, 'monitor/ssl_certificates_list.html', {
+        'certificates': certificates,
+        'active_nav': 'ssl'
     })
 
 
@@ -1403,6 +1363,7 @@ def monitoring_mode(request):
         "ssl_certificates": ssl_certificates,
         "ssl_summary": ssl_summary,
         "uptime_percentage": round((up_servers / enabled_servers * 100) if enabled_servers > 0 else 0, 1),
+        "active_nav": "monitoring",
     }
     
     return render(request, "monitor/monitoring_mode.html", context)
@@ -1555,6 +1516,7 @@ def network_dashboard(request):
         "isp_stats": isp_stats,
         "recent_events": recent_events,
         "recent_failovers": recent_failovers,
+        "active_nav": "network",
     }
     
     return render(request, "monitor/network_dashboard.html", context)
@@ -2724,6 +2686,7 @@ def cctv_dashboard(request):
         'online_count': online_count,
         'offline_count': offline_count,
         'unknown_count': unknown_count,
+        'active_nav': 'cctv',
     }
     
     return render(request, 'monitor/cctv_dashboard.html', context)
@@ -3587,7 +3550,13 @@ def server_detailed_metrics_api(request, server_id):
     # 2. Get Historical Data (Last 24 hours)
     historical = monitor.get_performance_trend(server, hours=24)
     
-    # 3. Service Status (Example check)
+    # 3. Get SSL Certificates from database
+    from .models import SSLCertificate
+    db_certs = list(SSLCertificate.objects.filter(server=server).values(
+        'name', 'domain', 'issuer', 'expires_at', 'days_until_expiry', 'is_valid', 'last_checked'
+    ))
+    
+    # 4. Service Status (Example check)
     services = [
         {'name': 'SSH', 'status': 'up' if server.last_status == 'UP' else 'down'},
         {'name': 'HTTP', 'status': 'up' if server.last_http_ok else 'down'},
@@ -3603,6 +3572,7 @@ def server_detailed_metrics_api(request, server_id):
         'metrics': metrics_data.get('current', {}),
         'historical': historical,
         'ssl': metrics_data.get('current', {}).get('ssl', {}),
+        'db_ssl': db_certs,
         'directory_watch': metrics_data.get('current', {}).get('directory_watch', []),
         'services': services,
         'timestamp': timezone.now().isoformat()

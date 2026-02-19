@@ -2,6 +2,7 @@ import logging
 from typing import List, Dict, Any
 from django.conf import settings
 from django.core.mail import send_mail
+from .fcm.fcm_service import FcmService
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,17 @@ class ConsoleChannel(NotificationChannel):
         logger.info(f"Console notification to {recipient}: {subject}")
         return True
 
+class PushNotificationChannel(NotificationChannel):
+    """Mobile Push notification channel via FCM."""
+    def __init__(self):
+        self.fcm = FcmService()
+
+    def send(self, recipient: str, subject: str, message: str) -> bool:
+        # In a topic-based system, we might broadcast to 'all_users' or a specific recipient ID
+        # For simplicity, we'll send to the 'alerts' topic which mobile apps can subscribe to
+        topic = "alerts"
+        return self.fcm.send_to_topic(topic, subject, message)
+
 class NotificationService:
     """Service to handle sending notifications via configured channels."""
     
@@ -36,7 +48,7 @@ class NotificationService:
         self.channels: Dict[str, NotificationChannel] = {
             'email': EmailChannel(),
             'console': ConsoleChannel(),
-            # Add other channels here (e.g., Slack, Webhook)
+            'push': PushNotificationChannel(),
         }
 
     def send_notification(self, channels: List[str], recipient: str, subject: str, message: str):

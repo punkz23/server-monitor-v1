@@ -24,7 +24,7 @@ class MonitorConfig(AppConfig):
             import os
             if os.environ.get('DJANGO_SETTINGS_MODULE') == 'serverwatch.settings':
                 # Uncomment the line below to enable automatic monitoring on startup
-                # start_automated_monitoring()
+                start_automated_monitoring()
                 pass
         except Exception as e:
             # Don't let monitoring startup errors break the app

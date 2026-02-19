@@ -30,52 +30,42 @@ class SSLCertificateMonitor:
             # Connect to the server
             with socket.create_connection((hostname, port), timeout=self.timeout) as sock:
                 with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                    cert = ssock.getpeercert()
+                    # getpeercert() returns empty dict if verify_mode is CERT_NONE
+                    # Use binary form and parse manually
+                    cert_der = ssock.getpeercert(binary_form=True)
+                    cert_pem = ssl.DER_cert_to_PEM_cert(cert_der)
+                    
+                    import OpenSSL
+                    x509 = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_pem)
                     
                     # Extract certificate information
-                    subject_dict = {}
-                    issuer_dict = {}
+                    subject = x509.get_subject()
+                    subject_dict = {name.decode(): value.decode() for name, value in subject.get_components()}
                     
-                    # Parse subject - certificate format: ((('field', 'value'),),)
-                    try:
-                        subject = cert.get('subject', [])
-                        if subject and isinstance(subject, tuple):
-                            for item_tuple in subject:
-                                if isinstance(item_tuple, tuple) and len(item_tuple) > 0:
-                                    item = item_tuple[0]
-                                    if isinstance(item, tuple) and len(item) == 2:
-                                        field, value = item
-                                        subject_dict[field] = value
-                    except Exception as e:
-                        logger.warning(f"Error parsing subject: {e}")
+                    issuer = x509.get_issuer()
+                    issuer_dict = {name.decode(): value.decode() for name, value in issuer.get_components()}
                     
-                    # Parse issuer - certificate format: ((('field', 'value'),),)
-                    try:
-                        issuer = cert.get('issuer', [])
-                        if issuer and isinstance(issuer, tuple):
-                            for item_tuple in issuer:
-                                if isinstance(item_tuple, tuple) and len(item_tuple) > 0:
-                                    item = item_tuple[0]
-                                    if isinstance(item, tuple) and len(item) == 2:
-                                        field, value = item
-                                        issuer_dict[field] = value
-                    except Exception as e:
-                        logger.warning(f"Error parsing issuer: {e}")
+                    # OpenSSL dates are in format: YYYYMMDDHHMMSSZ
+                    not_before_str = x509.get_notBefore().decode()
+                    not_after_str = x509.get_notAfter().decode()
+                    
+                    not_before = datetime.strptime(not_before_str, '%Y%m%d%H%M%SZ')
+                    not_after = datetime.strptime(not_after_str, '%Y%m%d%H%M%SZ')
                     
                     ssl_info = {
                         'hostname': hostname,
                         'port': port,
                         'subject': subject_dict,
                         'issuer': issuer_dict,
-                        'version': cert.get('version'),
-                        'serial_number': cert.get('serialNumber'),
-                        'not_before': self._parse_date(cert.get('notBefore')),
-                        'not_after': self._parse_date(cert.get('notAfter')),
-                        'days_remaining': self._calculate_days_remaining(cert.get('notAfter')),
-                        'is_valid': self._is_certificate_valid(cert),
-                        'signature_algorithm': cert.get('signatureAlgorithm'),
-                        'subject_alt_names': self._get_subject_alt_names(cert),
-                        'fingerprint': self._get_fingerprint(cert),
+                        'version': x509.get_version(),
+                        'serial_number': x509.get_serial_number(),
+                        'not_before': not_before,
+                        'not_after': not_after,
+                        'days_remaining': (not_after - datetime.now()).days,
+                        'is_valid': not_before <= datetime.now() <= not_after,
+                        'signature_algorithm': x509.get_signature_algorithm().decode(),
+                        'subject_alt_names': [], # Harder to parse from OpenSSL object easily
+                        'fingerprint': x509.digest('sha256').decode(),
                         'checked_at': datetime.now()
                     }
                     

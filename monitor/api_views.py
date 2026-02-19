@@ -342,41 +342,44 @@ def mobile_dashboard_summary(request):
     Mobile API: Get dashboard summary with counts and status
     """
     # Server counts
-    total_servers = Server.objects.count()
-    enabled_servers = Server.objects.filter(enabled=True).count()
-    online_servers = Server.objects.filter(enabled=True, last_status='UP').count()
+    enabled_servers_qs = Server.objects.filter(enabled=True)
+    total_servers = enabled_servers_qs.count()
+    online_servers = enabled_servers_qs.filter(last_status='UP').count()
     
     # Network device counts
-    total_devices = NetworkDevice.objects.count()
     active_devices = NetworkDevice.objects.filter(is_active=True).count()
     
-    # Recent alerts count
-    recent_alerts = AlertEvent.objects.filter(
+    # Recent alerts
+    recent_alerts_qs = AlertEvent.objects.filter(
         created_at__gte=timezone.now() - timedelta(hours=24)
-    ).count()
+    ).order_by('-created_at')
     
-    # Critical alerts
-    critical_alerts = AlertEvent.objects.filter(
-        severity='CRITICAL',
-        is_recovery=False
-    ).count()
+    recent_alerts_count = recent_alerts_qs.count()
+    critical_alerts_count = recent_alerts_qs.filter(severity='CRITICAL', is_recovery=False).count()
     
+    # Top 5 most recent alerts for the dashboard
+    top_alerts = AlertEventSerializer(recent_alerts_qs[:5], many=True).data
+    
+    # Status by type for a quick breakdown chart on mobile
+    status_by_type = {}
+    for s_type, label in Server.TYPE_CHOICES:
+        type_qs = enabled_servers_qs.filter(server_type=s_type)
+        if type_qs.exists():
+            status_by_type[label] = {
+                'total': type_qs.count(),
+                'online': type_qs.filter(last_status='UP').count()
+            }
+
     return Response({
-        'servers': {
-            'total': total_servers,
-            'enabled': enabled_servers,
-            'online': online_servers,
-            'offline': enabled_servers - online_servers
+        'summary': {
+            'servers_online': online_servers,
+            'servers_total': total_servers,
+            'devices_online': active_devices,
+            'alerts_24h': recent_alerts_count,
+            'critical_alerts': critical_alerts_count,
         },
-        'network_devices': {
-            'total': total_devices,
-            'active': active_devices,
-            'inactive': total_devices - active_devices
-        },
-        'alerts': {
-            'recent_24h': recent_alerts,
-            'critical': critical_alerts
-        },
+        'status_by_type': status_by_type,
+        'top_alerts': top_alerts,
         'timestamp': timezone.now().isoformat()
     })
 

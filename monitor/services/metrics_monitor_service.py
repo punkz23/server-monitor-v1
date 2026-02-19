@@ -182,8 +182,9 @@ class MetricsMonitorService:
             metrics['directory_watch'] = [] # Ensure it's always an array
 
         # SSL metrics
-        if agent_metrics.ssl_metrics:
-            metrics['ssl'] = agent_metrics.ssl_metrics
+        ssl_metrics = getattr(agent_metrics, 'ssl_metrics', [])
+        if ssl_metrics:
+            metrics['ssl'] = ssl_metrics
         else:
             metrics['ssl'] = [] # Ensure it's always an array
         
@@ -451,19 +452,14 @@ class MetricsMonitorService:
         try:
             logger.info(f"Getting SSL certificates for {ip_address}, server type: {server.server_type if server else 'None'}")
             
-            # For now, use certificate file checking for all servers
-            # Map server names to certificate paths
-            cert_paths = {
-                '192.168.254.13': '/etc/letsencrypt/live/dailyoverland.com/cert.pem',
-                '192.168.254.50': '/etc/letsencrypt/live/id.dailyoverland.com/cert.pem',
-                '192.168.253.15': '/etc/letsencrypt/live/ho.employee.dailyoverland.com/cert.pem'
-            }
+            # 1. Try SSH file check first if a custom path is specified (Most definitive)
+            cert_path = None
+            if server and server.ssl_cert_path:
+                cert_path = server.ssl_cert_path
             
-            cert_path = cert_paths.get(ip_address)
             if cert_path:
-                logger.info(f"Checking certificate file: {cert_path}")
-                
-                # Check if certificate file exists first
+                logger.info(f"Checking custom certificate file via SSH: {cert_path}")
+                # ... [same SSH code as before]
                 stdin, stdout, stderr = ssh.exec_command(f"test -f {cert_path} && echo 'EXISTS' || echo 'NOT_FOUND'")
                 file_check = stdout.read().decode().strip()
                 
@@ -508,29 +504,28 @@ class MetricsMonitorService:
                                 'status_color': '#dc3545' if days_remaining < 0 else '#ffc107' if days_remaining < 7 else '#ff9800' if days_remaining < 30 else '#28a745',
                                 'subject_common_name': common_name,
                                 'issuer_common_name': issuer,
-                                'checked_at': timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+                                'checked_at': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                'connection_method': 'ssh_file'
                             })
-                            logger.info(f"SSL certificate processed for {ip_address}: {common_name}, {days_remaining} days remaining")
+                            logger.info(f"SSL certificate processed via SSH for {ip_address}: {common_name}, {days_remaining} days remaining")
                         except ValueError as e:
                             logger.error(f"Could not parse certificate date for {ip_address}: {e}")
                     else:
                         logger.warning(f"Could not find certificate expiration date for {ip_address}")
                 else:
-                    logger.warning(f"Certificate file not found: {cert_path}")
-            else:
-                logger.info(f"No certificate path configured for {ip_address}")
-            
-            # If no certificates found via file checking, try SSL connection for web servers
-            if not ssl_certificates and server and server.server_type == 'WEB':
-                logger.info(f"Trying SSL connection for web server {ip_address}")
+                    logger.warning(f"Certificate file not found via SSH: {cert_path}")
+
+            # 2. If no cert found via SSH, try direct SSL connection
+            if not ssl_certificates:
                 try:
+                    # Check port 443 by default
                     ssl_info = ssl_monitor.get_ssl_info(ip_address, 443)
                     if ssl_info:
                         formatted_cert = ssl_monitor.format_certificate_info(ssl_info)
                         ssl_certificates.append(formatted_cert)
-                        logger.info(f"SSL certificate found via connection for {ip_address}:443")
+                        logger.info(f"SSL certificate found via direct connection for {ip_address}:443")
                 except Exception as e:
-                    logger.debug(f"SSL connection failed for {ip_address}:443 - {e}")
+                    logger.debug(f"Direct SSL connection failed for {ip_address}:443 - {e}")
             
             logger.info(f"Total SSL certificates found for {ip_address}: {len(ssl_certificates)}")
             return ssl_certificates
@@ -602,17 +597,21 @@ class MetricsMonitorService:
                     'direction': 'increase' if new_disk > old_disk else 'decrease'
                 }
         
-        # Compare SSL
+        # Compare SSL (SSL is a list of certificates)
         if 'ssl' in old_metrics and 'ssl' in new_metrics:
-            old_ssl = old_metrics['ssl'].get('days_remaining', 0)
-            new_ssl = new_metrics['ssl'].get('days_remaining', 0)
-            if abs(old_ssl - new_ssl) > 0:
-                changes['ssl'] = {
-                    'old_days': old_ssl,
-                    'new_days': new_ssl,
-                    'change': new_ssl - old_ssl,
-                    'direction': 'decrease' if new_ssl < old_ssl else 'increase'  # Days decreasing = getting closer to expiration
-                }
+            old_ssl_list = old_metrics['ssl']
+            new_ssl_list = new_metrics['ssl']
+            
+            if isinstance(old_ssl_list, list) and isinstance(new_ssl_list, list) and old_ssl_list and new_ssl_list:
+                old_ssl = old_ssl_list[0].get('days_remaining', 0)
+                new_ssl = new_ssl_list[0].get('days_remaining', 0)
+                if abs(old_ssl - new_ssl) > 0:
+                    changes['ssl'] = {
+                        'old_days': old_ssl,
+                        'new_days': new_ssl,
+                        'change': new_ssl - old_ssl,
+                        'direction': 'decrease' if new_ssl < old_ssl else 'increase'
+                    }
         
         return changes
     
@@ -663,7 +662,7 @@ class MetricsMonitorService:
     def get_performance_trend(self, server, hours=24) -> dict:
         """Get performance trend data for a server, prioritizing agent-sourced metrics"""
         from monitor.models_metrics import ServerMetrics
-        from monitor.models import ResourceSample, CheckResult
+        from monitor.models import ResourceSample, CheckResult, DiskUsageSample
         
         since = timezone.now() - timedelta(hours=hours)
         
@@ -699,11 +698,16 @@ class MetricsMonitorService:
             collected_at__gte=since
         ).order_by('collected_at')
         
+        disk_samples = DiskUsageSample.objects.filter(
+            server=server,
+            collected_at__gte=since
+        ).order_by('collected_at')
+        
         return {
             'cpu': [{'x': s.collected_at.isoformat(), 'y': s.cpu_percent} for s in res_samples if s.cpu_percent is not None],
             'ram': [{'x': s.collected_at.isoformat(), 'y': s.ram_percent} for s in res_samples if s.ram_percent is not None],
-            'disk': [{'x': s.collected_at.isoformat(), 'y': s.disk_usage_percent} for s in res_samples if s.disk_usage_percent is not None],
-            'load': [{'x': s.collected_at.isoformat(), 'y': s.last_load_1} for s in res_samples if hasattr(s, 'last_load_1') and s.last_load_1 is not None],
+            'disk': [{'x': s.collected_at.isoformat(), 'y': s.percent} for s in disk_samples if s.percent is not None],
+            'load': [{'x': s.collected_at.isoformat(), 'y': s.load_1} for s in res_samples if s.load_1 is not None],
             'latency': latency_trend,
             'source': 'legacy'
         }

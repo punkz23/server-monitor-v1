@@ -679,7 +679,10 @@
 
   <!-- SSL Certificate Monitoring Section -->
   <div class="server-category" style="margin-top: 32px;">
-    <h2 class="category-title">SSL Certificates</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 class="category-title" style="margin-bottom: 0;">SSL Certificates</h2>
+      <a href="{% url 'ssl_certificates_list' %}" style="color: var(--accent); text-decoration: none; font-size: 0.9rem;">View All Certificates →</a>
+    </div>
     
     <div id="certificates-container">
       <div class="certificate-loading" style="text-align: center; padding: 20px; color: var(--text-muted);">

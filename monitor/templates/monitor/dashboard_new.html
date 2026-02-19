@@ -499,7 +499,10 @@
     </div>
 
     <div id="ssl-info" class="panel-section">
-        <div class="panel-section-title">SSL Certificates</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div class="panel-section-title" style="margin-bottom: 0;">SSL Certificates</div>
+            <a href="{% url 'ssl_certificates_list' %}" style="color: var(--accent); text-decoration: none; font-size: 0.8rem;">View All →</a>
+        </div>
         <div id="ssl-details"></div>
     </div>
 
@@ -816,16 +819,35 @@
 
                 // Render SSL Details in Side Panel
                 const sslDetails = document.getElementById('ssl-details');
-                if (data.ssl && data.ssl.length > 0) {
-                    sslDetails.innerHTML = data.ssl.map(cert => `
+                let sslDisplayList = [];
+                
+                if (data.db_ssl && data.db_ssl.length > 0) {
+                    sslDisplayList = data.db_ssl.map(cert => ({
+                        name: cert.name || cert.domain || 'Unknown',
+                        issuer: cert.issuer || 'Unknown',
+                        expiry_date: cert.expires_at,
+                        days_remaining: cert.days_until_expiry,
+                        status: cert.days_until_expiry < 0 ? 'expired' : (cert.days_until_expiry < 7 ? 'critical' : (cert.days_until_expiry < 30 ? 'warning' : 'good')),
+                        connection_method: 'database'
+                    }));
+                } else if (data.ssl && data.ssl.length > 0) {
+                    sslDisplayList = data.ssl.map(cert => ({
+                        name: cert.subject_common_name || cert.common_name || 'N/A',
+                        issuer: cert.issuer_common_name || cert.issuer || 'N/A',
+                        expiry_date: cert.expiry_date,
+                        days_remaining: cert.days_remaining,
+                        status: cert.status,
+                        connection_method: 'real-time'
+                    }));
+                }
+
+                if (sslDisplayList.length > 0) {
+                    sslDetails.innerHTML = sslDisplayList.map(cert => `
                         <div style="margin-bottom: 12px; background: var(--bg-tertiary); padding: 12px; border-radius: 8px; position: relative;">
                             <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">
-                                ${cert.subject_common_name || cert.common_name || 'N/A'}
-                                ${cert.port && cert.port !== 443 ? `:${cert.port}` : ''}
+                                ${cert.name}
                             </div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted);">Issuer: ${cert.issuer_common_name || cert.issuer || 'N/A'}</div>
-                            ${cert.path ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Path: ${cert.path}</div>` : ''}
-                            ${cert.hostname ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Hostname: ${cert.hostname}</div>` : ''}
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Issuer: ${cert.issuer}</div>
                             <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
                                 <span>Expires: ${formatDateString(cert.expiry_date)}</span>
                                 <span class="status ${cert.status === 'expired' || cert.status === 'critical' ? 'down' : cert.status === 'warning' ? 'warning' : 'up'}">
