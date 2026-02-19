@@ -1,0 +1,287 @@
+{% extends "monitor/base.html" %}
+
+{% block title %}{{ device.name }} - All Cameras{% endblock %}
+
+{% block extra_css %}
+<style>
+  .device-header {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .device-info h1 {
+    margin: 0 0 8px 0;
+  }
+  
+  .device-status {
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  
+  .status-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  
+  .status-online { background: var(--success); }
+  .status-offline { background: var(--danger); }
+  .status-unknown { background: var(--unknown); }
+  
+  .cameras-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+  }
+  
+  .camera-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .camera-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+  
+  .camera-preview {
+    width: 100%;
+    height: 200px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  
+  .camera-info {
+    margin-bottom: 16px;
+  }
+  
+  .camera-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  .camera-details {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+  
+  .camera-actions {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .btn {
+    padding: 8px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+  }
+  
+  .btn:hover {
+    background: var(--accent-hover);
+  }
+  
+  .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  
+  .btn-secondary:hover {
+    background: var(--hover-bg);
+  }
+  
+  .rtsp-url {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+  
+  .device-details {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .detail-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  
+  .detail-value {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="device-header">
+  <div class="device-info">
+    <h1>{{ device.name }}</h1>
+    <p style="color: var(--text-secondary); margin: 0;">
+      {{ device.domain }}:{{ device.port }} • {{ cameras|length }} Cameras
+    </p>
+  </div>
+  <div class="device-status">
+    <span class="status-indicator status-{{ device.status }}"></span>
+    {{ device.status|title }}
+  </div>
+</div>
+
+<div class="device-details">
+  <h2>Device Information</h2>
+  <div class="detail-grid">
+    <div class="detail-item">
+      <div class="detail-label">Domain</div>
+      <div class="detail-value">{{ device.domain }}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Port</div>
+      <div class="detail-value">{{ device.port }}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Username</div>
+      <div class="detail-value">{{ device.username }}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Protocol</div>
+      <div class="detail-value">{{ device.protocol }}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Last Checked</div>
+      <div class="detail-value">
+        {% if device.last_checked %}
+          {{ device.last_checked|date:"Y-m-d H:i:s" }}
+        {% else %}
+          Never
+        {% endif %}
+      </div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Actions</div>
+      <div class="detail-value">
+        <button class="btn btn-secondary" onclick="checkAllStatuses()">Check Status</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 style="margin-bottom: 16px;">All Cameras</h2>
+
+<div class="cameras-grid">
+  {% for camera in cameras %}
+    <div class="camera-card">
+      <div class="camera-preview">
+        <div>
+          <h4>Camera {{ camera.number }}</h4>
+          <p style="font-size: 0.8rem;">Live Feed Preview</p>
+        </div>
+      </div>
+      
+      <div class="camera-info">
+        <div class="camera-name">{{ camera.name }}</div>
+        <div class="camera-details">
+          <div>Channel: {{ camera.number }}</div>
+          <div class="rtsp-url">{{ camera.rtsp_url }}</div>
+        </div>
+      </div>
+      
+      <div class="camera-actions">
+        <a href="{% url 'cctv_camera_detail' device.id camera.number %}" class="btn">
+          View Camera
+        </a>
+        <button class="btn btn-secondary" onclick="copyRTSP('{{ camera.rtsp_url|escapejs }}')">
+          Copy RTSP
+        </button>
+        <button class="btn btn-secondary" onclick="testStream('{{ camera.rtsp_url|escapejs }}')">
+          Test Stream
+        </button>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div style="margin-top: 32px; text-align: center;">
+  <a href="{% url 'cctv_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function checkAllStatuses() {
+  fetch('{% url "check_cctv_status" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: 'device_id={{ device.id }}'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Status checked: ' + data.status);
+      location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error: ' + error.message);
+  });
+}
+
+function copyRTSP(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    alert('RTSP URL copied to clipboard!\n\n' + url);
+  }).catch(err => {
+    alert('Failed to copy URL');
+  });
+}
+
+function testStream(url) {
+  alert('RTSP Stream Test\n\nURL: ' + url + '\n\nThis would open VLC or another RTSP player to test the stream.\n\nFor web viewing, you need:\n- Media server (Wowza, FFmpeg, etc.)\n- WebRTC conversion\n- Or browser plugins');
+}
+</script>
+{% endblock %}

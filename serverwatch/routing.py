@@ -1,0 +1,3 @@
+from monitor.routing import websocket_urlpatterns as monitor_websocket_urlpatterns
+
+websocket_urlpatterns = monitor_websocket_urlpatterns

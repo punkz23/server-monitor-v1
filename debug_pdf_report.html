@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bandwidth Usage Report - Sophos XGS126 Firewall</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #0066cc;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #0066cc;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #0066cc;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-item {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+        }
+        
+        .summary-item .label {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .summary-item .value {
+            font-size: 18px;
+            color: #0066cc;
+            margin-top: 5px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 10px;
+        }
+        
+        .bytes-format {
+            font-family: monospace;
+        }
+        
+        .trends-chart {
+            margin: 20px 0;
+        }
+        
+        .protocol-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .protocol-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .protocol-bar {
+            background-color: #0066cc;
+            height: 20px;
+            border-radius: 3px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Bandwidth Usage Report</h1>
+        <div class="subtitle">
+            Device: Sophos XGS126 Firewall (192.168.253.2)<br>
+            Report Type: Consumers<br>
+            Period: 24 hours<br>
+            Generated: 2025-12-26 09:19:27
+        </div>
+    </div>
+
+    
+    <div class="section">
+        <h2>Top Bandwidth Consumers</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>Device Name</th>
+                    <th>Device Type</th>
+                    <th>Hostname</th>
+                    <th>Bytes Sent</th>
+                    <th>Bytes Received</th>
+                    <th>Total Bytes</th>
+                    <th>Connections</th>
+                    <th>Protocols</th>
+                    <th>Last Seen</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td class="bytes-format">9.9.9.9</td>
+                    <td>Unknown (9.9.9.9)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">14.6 GB</td>
+                    <td class="bytes-format">4.3 GB</td>
+                    <td class="bytes-format">18.9 GB</td>
+                    <td>146</td>
+                    <td>SMTP, IMAP, SSH, DNS, POP3, HTTPS, FTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">1.1.1.1</td>
+                    <td>Unknown (1.1.1.1)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">11.2 GB</td>
+                    <td class="bytes-format">1.9 GB</td>
+                    <td class="bytes-format">13.2 GB</td>
+                    <td>98</td>
+                    <td>RDP, HTTPS, HTTP, SMTP, SSH, IMAP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.13</td>
+                    <td>Unknown (192.168.253.13)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">11.1 GB</td>
+                    <td class="bytes-format">2.5 GB</td>
+                    <td class="bytes-format">13.6 GB</td>
+                    <td>54</td>
+                    <td>HTTP, FTP, SMTP, HTTPS, DNS, SSH</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.31</td>
+                    <td>Device-31-1</td>
+                    <td>UNKNOWN</td>
+                    <td>Device-31</td>
+                    <td class="bytes-format">9.9 GB</td>
+                    <td class="bytes-format">4.4 GB</td>
+                    <td class="bytes-format">14.3 GB</td>
+                    <td>232</td>
+                    <td>DNS, IMAP, RDP, HTTP, FTP, SSH</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.20</td>
+                    <td>DEV-MySQLServer</td>
+                    <td>UNKNOWN</td>
+                    <td>DEV-MySQLServer</td>
+                    <td class="bytes-format">9.3 GB</td>
+                    <td class="bytes-format">2.8 GB</td>
+                    <td class="bytes-format">12.1 GB</td>
+                    <td>147</td>
+                    <td>HTTP, RDP, IMAP, SSH, DNS, FTP, SMTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.13</td>
+                    <td>Unknown (192.168.253.13)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">9.1 GB</td>
+                    <td class="bytes-format">1.9 GB</td>
+                    <td class="bytes-format">11.1 GB</td>
+                    <td>214</td>
+                    <td>SSH, POP3, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">9.9.9.9</td>
+                    <td>Unknown (9.9.9.9)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">9.0 GB</td>
+                    <td class="bytes-format">2.0 GB</td>
+                    <td class="bytes-format">11.0 GB</td>
+                    <td>191</td>
+                    <td>RDP, SSH, HTTPS, HTTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.101</td>
+                    <td>EPSONE622A0</td>
+                    <td>UNKNOWN</td>
+                    <td>EPSONE622A0</td>
+                    <td class="bytes-format">8.9 GB</td>
+                    <td class="bytes-format">4.0 GB</td>
+                    <td class="bytes-format">12.9 GB</td>
+                    <td>119</td>
+                    <td>SSH, HTTP, FTP, IMAP, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.102</td>
+                    <td>Unknown (192.168.253.102)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">8.7 GB</td>
+                    <td class="bytes-format">2.7 GB</td>
+                    <td class="bytes-format">11.4 GB</td>
+                    <td>73</td>
+                    <td>SSH, FTP, IMAP, HTTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.12</td>
+                    <td>Unknown (192.168.253.12)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">8.2 GB</td>
+                    <td class="bytes-format">4.2 GB</td>
+                    <td class="bytes-format">12.4 GB</td>
+                    <td>259</td>
+                    <td>FTP, HTTPS, SSH, IMAP, HTTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.23</td>
+                    <td>Unknown (192.168.253.23)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">8.1 GB</td>
+                    <td class="bytes-format">4.3 GB</td>
+                    <td class="bytes-format">12.4 GB</td>
+                    <td>89</td>
+                    <td>SSH, POP3, SMTP, FTP, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.32</td>
+                    <td>Unknown (192.168.253.32)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">8.1 GB</td>
+                    <td class="bytes-format">3.9 GB</td>
+                    <td class="bytes-format">12.0 GB</td>
+                    <td>98</td>
+                    <td>DNS, FTP, HTTP, HTTPS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.100</td>
+                    <td>host.docker.internal</td>
+                    <td>UNKNOWN</td>
+                    <td>host.docker.internal</td>
+                    <td class="bytes-format">8.1 GB</td>
+                    <td class="bytes-format">2.9 GB</td>
+                    <td class="bytes-format">10.9 GB</td>
+                    <td>38</td>
+                    <td>RDP, DNS, POP3, HTTPS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.32</td>
+                    <td>Unknown (192.168.253.32)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">7.9 GB</td>
+                    <td class="bytes-format">2.7 GB</td>
+                    <td class="bytes-format">10.6 GB</td>
+                    <td>23</td>
+                    <td>IMAP, DNS, FTP, SMTP, HTTPS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">208.67.222.222</td>
+                    <td>Unknown (208.67.222.222)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">7.8 GB</td>
+                    <td class="bytes-format">2.6 GB</td>
+                    <td class="bytes-format">10.4 GB</td>
+                    <td>78</td>
+                    <td>DNS, HTTPS, HTTP, SMTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.30</td>
+                    <td>Unknown (192.168.253.30)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">7.8 GB</td>
+                    <td class="bytes-format">804.6 MB</td>
+                    <td class="bytes-format">8.6 GB</td>
+                    <td>130</td>
+                    <td>HTTPS, POP3</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">8.8.8.8</td>
+                    <td>Unknown (8.8.8.8)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">7.8 GB</td>
+                    <td class="bytes-format">1.6 GB</td>
+                    <td class="bytes-format">9.3 GB</td>
+                    <td>181</td>
+                    <td>HTTPS, HTTP, DNS, RDP, FTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.21</td>
+                    <td>Unknown (192.168.253.21)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">7.7 GB</td>
+                    <td class="bytes-format">656.5 MB</td>
+                    <td class="bytes-format">8.4 GB</td>
+                    <td>12</td>
+                    <td>HTTPS, HTTP, DNS, SSH, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.21</td>
+                    <td>Unknown (192.168.253.21)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">7.2 GB</td>
+                    <td class="bytes-format">2.3 GB</td>
+                    <td class="bytes-format">9.6 GB</td>
+                    <td>147</td>
+                    <td>POP3, SSH, IMAP, HTTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.11</td>
+                    <td>Unknown (192.168.253.11)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">7.2 GB</td>
+                    <td class="bytes-format">2.8 GB</td>
+                    <td class="bytes-format">9.9 GB</td>
+                    <td>188</td>
+                    <td>HTTPS, FTP, HTTP, DNS, RDP, SMTP, POP3</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.33</td>
+                    <td>Unknown (192.168.253.33)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">7.1 GB</td>
+                    <td class="bytes-format">1.2 GB</td>
+                    <td class="bytes-format">8.4 GB</td>
+                    <td>107</td>
+                    <td>SMTP, HTTPS, DNS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.31</td>
+                    <td>Device-31-1</td>
+                    <td>UNKNOWN</td>
+                    <td>Device-31</td>
+                    <td class="bytes-format">6.7 GB</td>
+                    <td class="bytes-format">1.9 GB</td>
+                    <td class="bytes-format">8.5 GB</td>
+                    <td>118</td>
+                    <td>HTTP, FTP, IMAP, SMTP, POP3</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.102</td>
+                    <td>Unknown (192.168.253.102)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">6.5 GB</td>
+                    <td class="bytes-format">1.9 GB</td>
+                    <td class="bytes-format">8.4 GB</td>
+                    <td>49</td>
+                    <td>FTP, SSH, DNS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">8.8.8.8</td>
+                    <td>Unknown (8.8.8.8)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">6.4 GB</td>
+                    <td class="bytes-format">5.0 GB</td>
+                    <td class="bytes-format">11.4 GB</td>
+                    <td>107</td>
+                    <td>FTP, SSH, IMAP, RDP, SMTP, DNS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.23</td>
+                    <td>Unknown (192.168.253.23)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">6.4 GB</td>
+                    <td class="bytes-format">2.9 GB</td>
+                    <td class="bytes-format">9.2 GB</td>
+                    <td>158</td>
+                    <td>SMTP, POP3, DNS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.30</td>
+                    <td>Unknown (192.168.253.30)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">6.3 GB</td>
+                    <td class="bytes-format">2.2 GB</td>
+                    <td class="bytes-format">8.4 GB</td>
+                    <td>128</td>
+                    <td>SMTP, SSH, RDP, HTTP, HTTPS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.10</td>
+                    <td>Device-10</td>
+                    <td>PC</td>
+                    <td>Device-10</td>
+                    <td class="bytes-format">6.2 GB</td>
+                    <td class="bytes-format">891.4 MB</td>
+                    <td class="bytes-format">7.1 GB</td>
+                    <td>137</td>
+                    <td>HTTP, DNS, SSH, FTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">208.67.222.222</td>
+                    <td>Unknown (208.67.222.222)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">6.2 GB</td>
+                    <td class="bytes-format">1.9 GB</td>
+                    <td class="bytes-format">8.0 GB</td>
+                    <td>69</td>
+                    <td>HTTP, IMAP, DNS, FTP, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">8.8.8.8</td>
+                    <td>Unknown (8.8.8.8)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">6.2 GB</td>
+                    <td class="bytes-format">1.5 GB</td>
+                    <td class="bytes-format">7.6 GB</td>
+                    <td>146</td>
+                    <td>SSH, IMAP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.22</td>
+                    <td>Unknown (192.168.253.22)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">6.1 GB</td>
+                    <td class="bytes-format">3.0 GB</td>
+                    <td class="bytes-format">9.1 GB</td>
+                    <td>96</td>
+                    <td>IMAP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">1.1.1.1</td>
+                    <td>Unknown (1.1.1.1)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">6.0 GB</td>
+                    <td class="bytes-format">1.0 GB</td>
+                    <td class="bytes-format">7.1 GB</td>
+                    <td>147</td>
+                    <td>FTP, HTTPS, HTTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">208.67.222.222</td>
+                    <td>Unknown (208.67.222.222)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">5.8 GB</td>
+                    <td class="bytes-format">902.2 MB</td>
+                    <td class="bytes-format">6.7 GB</td>
+                    <td>4</td>
+                    <td>POP3, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.103</td>
+                    <td>Unknown (192.168.253.103)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">5.5 GB</td>
+                    <td class="bytes-format">2.6 GB</td>
+                    <td class="bytes-format">8.0 GB</td>
+                    <td>175</td>
+                    <td>FTP, POP3, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.33</td>
+                    <td>Unknown (192.168.253.33)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">5.4 GB</td>
+                    <td class="bytes-format">2.6 GB</td>
+                    <td class="bytes-format">8.0 GB</td>
+                    <td>52</td>
+                    <td>FTP, DNS, RDP, SSH, IMAP, POP3, SMTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.100</td>
+                    <td>host.docker.internal</td>
+                    <td>UNKNOWN</td>
+                    <td>host.docker.internal</td>
+                    <td class="bytes-format">5.0 GB</td>
+                    <td class="bytes-format">1.2 GB</td>
+                    <td class="bytes-format">6.2 GB</td>
+                    <td>63</td>
+                    <td>RDP, SMTP, POP3</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.32</td>
+                    <td>Unknown (192.168.253.32)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">5.0 GB</td>
+                    <td class="bytes-format">2.4 GB</td>
+                    <td class="bytes-format">7.4 GB</td>
+                    <td>111</td>
+                    <td>IMAP, POP3, HTTP, FTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.21</td>
+                    <td>Unknown (192.168.253.21)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">4.7 GB</td>
+                    <td class="bytes-format">1.4 GB</td>
+                    <td class="bytes-format">6.2 GB</td>
+                    <td>133</td>
+                    <td>FTP, RDP, SSH</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">9.9.9.9</td>
+                    <td>Unknown (9.9.9.9)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">4.6 GB</td>
+                    <td class="bytes-format">126.4 MB</td>
+                    <td class="bytes-format">4.7 GB</td>
+                    <td>28</td>
+                    <td>DNS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.30</td>
+                    <td>Unknown (192.168.253.30)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">4.1 GB</td>
+                    <td class="bytes-format">1.9 GB</td>
+                    <td class="bytes-format">6.0 GB</td>
+                    <td>94</td>
+                    <td>RDP, DNS, POP3, HTTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.23</td>
+                    <td>Unknown (192.168.253.23)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">4.1 GB</td>
+                    <td class="bytes-format">2.1 GB</td>
+                    <td class="bytes-format">6.2 GB</td>
+                    <td>61</td>
+                    <td>SMTP, RDP, HTTPS, FTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.102</td>
+                    <td>Unknown (192.168.253.102)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.9 GB</td>
+                    <td class="bytes-format">1014.0 MB</td>
+                    <td class="bytes-format">4.9 GB</td>
+                    <td>90</td>
+                    <td>POP3, IMAP, SSH</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.22</td>
+                    <td>Unknown (192.168.253.22)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.9 GB</td>
+                    <td class="bytes-format">673.8 MB</td>
+                    <td class="bytes-format">4.6 GB</td>
+                    <td>92</td>
+                    <td>DNS, SSH, HTTPS, FTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.12</td>
+                    <td>Unknown (192.168.253.12)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.9 GB</td>
+                    <td class="bytes-format">410.9 MB</td>
+                    <td class="bytes-format">4.3 GB</td>
+                    <td>73</td>
+                    <td>HTTP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.10</td>
+                    <td>Device-10</td>
+                    <td>PC</td>
+                    <td>Device-10</td>
+                    <td class="bytes-format">3.9 GB</td>
+                    <td class="bytes-format">575.4 MB</td>
+                    <td class="bytes-format">4.5 GB</td>
+                    <td>139</td>
+                    <td>SMTP, HTTP, SSH</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.103</td>
+                    <td>Unknown (192.168.253.103)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.9 GB</td>
+                    <td class="bytes-format">1.9 GB</td>
+                    <td class="bytes-format">5.8 GB</td>
+                    <td>81</td>
+                    <td>IMAP, SMTP, HTTP, POP3, HTTPS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.11</td>
+                    <td>Unknown (192.168.253.11)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.8 GB</td>
+                    <td class="bytes-format">1.1 GB</td>
+                    <td class="bytes-format">4.9 GB</td>
+                    <td>23</td>
+                    <td>RDP, IMAP, HTTPS</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">8.8.8.8</td>
+                    <td>Unknown (8.8.8.8)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.8 GB</td>
+                    <td class="bytes-format">1.6 GB</td>
+                    <td class="bytes-format">5.4 GB</td>
+                    <td>19</td>
+                    <td>RDP, SSH</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.32</td>
+                    <td>Unknown (192.168.253.32)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.7 GB</td>
+                    <td class="bytes-format">1.3 GB</td>
+                    <td class="bytes-format">4.9 GB</td>
+                    <td>92</td>
+                    <td>FTP, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.11</td>
+                    <td>Unknown (192.168.253.11)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.4 GB</td>
+                    <td class="bytes-format">2.2 GB</td>
+                    <td class="bytes-format">5.7 GB</td>
+                    <td>61</td>
+                    <td>DNS, SMTP, RDP</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+                <tr>
+                    <td class="bytes-format">192.168.253.23</td>
+                    <td>Unknown (192.168.253.23)</td>
+                    <td>UNKNOWN</td>
+                    <td>-</td>
+                    <td class="bytes-format">3.3 GB</td>
+                    <td class="bytes-format">1.4 GB</td>
+                    <td class="bytes-format">4.6 GB</td>
+                    <td>81</td>
+                    <td>POP3</td>
+                    <td>2025-12-26 08:41:54</td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+    
+
+    
+
+    
+
+    <div class="footer">
+        <p>Report generated by Django ServerWatch on 2025-12-26 09:19:27</p>
+        <p>Device: Sophos XGS126 Firewall (192.168.253.2) | Type: Firewall</p>
+    </div>
+</body>
+</html>

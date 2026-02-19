@@ -1,0 +1,325 @@
+{% extends "monitor/base.html" %}
+
+{% block title %}Agent Status - {{ server.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🔍 Agent Status - {{ server.name }}</h1>
+  <p>Detailed agent status and recent logs for {{ server.ip_address }}</p>
+</div>
+
+<!-- Server Info -->
+<div class="server-info-section">
+  <h2>📋 Server Information</h2>
+  <div class="info-grid">
+    <div class="info-item">
+      <label>Server Name:</label>
+      <value>{{ server.name }}</value>
+    </div>
+    <div class="info-item">
+      <label>IP Address:</label>
+      <value>{{ server.ip_address }}</value>
+    </div>
+    <div class="info-item">
+      <label>Server Type:</label>
+      <value>{{ server.get_server_type_display }}</value>
+    </div>
+    <div class="info-item">
+      <label>Agent Status:</label>
+      <value>
+        <span class="status-badge status-{{ server.agent_status|default:'unknown' }}">
+          {% if server.agent_status == 'online' %}
+            🟢 Online
+          {% elif server.agent_status == 'offline' %}
+            🔴 Offline
+          {% else %}
+            ⚪ Unknown
+          {% endif %}
+        </span>
+      </value>
+    </div>
+    {% if server.agent_version %}
+    <div class="info-item">
+      <label>Agent Version:</label>
+      <value>v{{ server.agent_version }}</value>
+    </div>
+    {% endif %}
+    {% if server.last_agent_heartbeat %}
+    <div class="info-item">
+      <label>Last Heartbeat:</label>
+      <value title="{{ server.last_agent_heartbeat|date:'Y-m-d H:i:s' }}">
+        {{ server.last_agent_heartbeat|timesince }} ago
+      </value>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Service Status -->
+<div class="status-section">
+  <h2>⚙️ Service Status</h2>
+  <div class="status-grid">
+    <div class="status-item">
+      <label>Service Status:</label>
+      <value>
+        <span class="status-badge {% if status_info.service_status == 'active' %}status-online{% else %}status-offline{% endif %}">
+          {% if status_info.service_status == 'active' %}
+            🟢 Active
+          {% else %}
+            🔴 Inactive
+          {% endif %}
+        </span>
+      </value>
+    </div>
+    <div class="status-item">
+      <label>Service Enabled:</label>
+      <value>
+        <span class="status-badge {% if status_info.service_enabled == 'enabled' %}status-online{% else %}status-offline{% endif %}">
+          {% if status_info.service_enabled == 'enabled' %}
+            ✅ Enabled
+          {% else %}
+            ❌ Disabled
+          {% endif %}
+        </span>
+      </value>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Logs -->
+<div class="logs-section">
+  <h2>📜 Recent Agent Logs</h2>
+  <div class="logs-container">
+    {% if status_info.recent_logs %}
+      {% for log_line in status_info.recent_logs %}
+        {% if log_line %}
+          <div class="log-entry">
+            <span class="log-timestamp">{{ log_line|slice:":20" }}</span>
+            <span class="log-message">{{ log_line|slice:"20:" }}</span>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <div class="no-logs">
+        <p>No recent logs available</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="actions-section">
+  <h2>🔧 Agent Actions</h2>
+  <div class="actions">
+    <a href="{% url 'restart_agent' server.id %}" class="btn btn-warning">
+      🔄 Restart Agent
+    </a>
+    <a href="{% url 'check_agent_status' server.id %}" class="btn btn-primary">
+      🔍 Refresh Status
+    </a>
+    <button onclick="confirmUninstall({{ server.id }})" class="btn btn-danger">
+      🗑️ Uninstall Agent
+    </button>
+    <a href="{% url 'agent_deployment_dashboard' %}" class="btn btn-outline">
+      ↩️ Back to Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Uninstall Confirmation Modal -->
+<div id="uninstallModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>⚠️ Confirm Agent Uninstallation</h3>
+      <button onclick="closeUninstallModal()" class="close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to uninstall the agent from <strong>{{ server.name }}</strong>?</p>
+      <p class="warning">This will:</p>
+      <ul>
+        <li>Stop and disable the agent service</li>
+        <li>Remove all agent files from the server</li>
+        <li>Delete the agent configuration</li>
+        <li>Stop monitoring for this server</li>
+      </ul>
+      
+      <form method="POST" action="{% url 'uninstall_agent' server.id %}">
+        {% csrf_token %}
+        <div class="confirmation-input">
+          <label>Type "UNINSTALL-{{ server.id }}" to confirm:</label>
+          <input type="text" name="confirm" required placeholder="UNINSTALL-{{ server.id }}">
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-danger">
+            🗑️ Uninstall Agent
+          </button>
+          <button type="button" onclick="closeUninstallModal()" class="btn btn-outline">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.server-info-section,
+.status-section,
+.logs-section,
+.actions-section {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border: 1px solid var(--border);
+}
+
+.info-grid,
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.info-item,
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.info-item label,
+.status-item label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.info-item value,
+.status-item value {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-online {
+  background: #10b981;
+  color: white;
+}
+
+.status-offline {
+  background: #ef4444;
+  color: white;
+}
+
+.logs-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+.log-entry {
+  margin-bottom: 5px;
+  padding: 8px;
+  background: var(--card-bg);
+  border-radius: 4px;
+  border-left: 3px solid var(--accent);
+}
+
+.log-timestamp {
+  color: var(--text-secondary);
+  margin-right: 10px;
+}
+
+.log-message {
+  color: var(--text-primary);
+}
+
+.no-logs {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 20px;
+}
+
+.warning {
+  color: #f59e0b;
+  font-weight: 500;
+  margin: 10px 0;
+}
+
+.warning ul {
+  margin-left: 20px;
+}
+
+.warning li {
+  margin: 5px 0;
+}
+
+.confirmation-input {
+  margin: 20px 0;
+}
+
+.confirmation-input label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.confirmation-input input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .info-grid,
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+}
+</style>
+
+<script>
+function confirmUninstall(serverId) {
+  document.getElementById('uninstallModal').style.display = 'block';
+}
+
+function closeUninstallModal() {
+  document.getElementById('uninstallModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  const modal = document.getElementById('uninstallModal');
+  if (event.target === modal) {
+    closeUninstallModal();
+  }
+}
+</script>
+{% endblock %}

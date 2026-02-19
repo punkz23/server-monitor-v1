@@ -1,0 +1,888 @@
+{% load tz %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ServerWatch - Monitoring Mode</title>
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #111119;
+      --bg-tertiary: #1a1a29;
+      --text-primary: #f1f1f1;
+      --text-secondary: #b1b1b1;
+      --text-muted: #6b7280;
+      --border: #2a2a3e;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --unknown: #6b7280;
+      --card-bg: #16161f;
+      --hover-bg: #1f1f2e;
+      --grid-bg: #0f0f17;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.4;
+      overflow-x: hidden;
+    }
+    
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    
+    .header-content {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .nav {
+      display: flex;
+      gap: 16px;
+    }
+    
+    .nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+    }
+    
+    .nav a:hover, .nav a.active {
+      color: var(--text-primary);
+      background: var(--bg-tertiary);
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--accent);
+    }
+    
+    .stat-card.success::before { background: var(--success); }
+    .stat-card.danger::before { background: var(--danger); }
+    .stat-card.warning::before { background: var(--warning); }
+    .stat-card.unknown::before { background: var(--unknown); }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 8px 0;
+      color: var(--text-primary);
+    }
+    
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .network-overview {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 0 0 20px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .server-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    
+    .server-tile {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .server-tile:hover {
+      background: var(--hover-bg);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    
+    .server-tile.pinned {
+      border-left: 3px solid var(--accent);
+    }
+    
+    .server-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: white;
+    }
+    
+    .server-icon.web { background: var(--accent); }
+    .server-icon.db { background: var(--success); }
+    .server-icon.file { background: var(--warning); }
+    .server-icon.dev { background: #8b5cf6; }
+    .server-icon.other { background: var(--text-muted); }
+    
+    .server-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .server-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .server-address {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin: 0 0 8px;
+    }
+    
+    .server-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .server-status.up {
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.1);
+    }
+    
+    .server-status.up .status-dot {
+      background: var(--success);
+    }
+    
+    .server-status.down {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .server-status.down .status-dot {
+      background: var(--danger);
+    }
+    
+    .server-status.unknown {
+      color: var(--unknown);
+      background: rgba(107, 114, 128, 0.1);
+    }
+    
+    .server-status.unknown .status-dot {
+      background: var(--unknown);
+    }
+    
+    .timeline {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      height: fit-content;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    
+    .timeline::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .timeline::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+    }
+    
+    .timeline::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    
+    .event-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .event-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .event-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 45px;
+    }
+    
+    .event-content {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .event-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    
+    .event-severity {
+      font-size: 0.625rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .event-severity.info {
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--accent);
+    }
+    
+    .event-severity.warn {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--warning);
+    }
+    
+    .event-severity.crit {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+    }
+    
+    .event-server {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    
+    .event-title {
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      margin: 0;
+      line-height: 1.3;
+    }
+    
+    .server-type-section {
+      margin-bottom: 24px;
+    }
+    
+    .server-type-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 0 0 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--success);
+    }
+    
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* SSL Certificate Styles */
+    .ssl-overview {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .ssl-summary {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-left: auto;
+    }
+    
+    .ssl-count {
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+    
+    .ssl-count.good { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .ssl-count.warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .ssl-count.critical { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .ssl-count.expired { background: rgba(107, 114, 128, 0.2); color: var(--text-muted); }
+    
+    .ssl-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .ssl-tile {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .ssl-tile:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    
+    .ssl-tile.good { border-left: 4px solid var(--success); }
+    .ssl-tile.warning { border-left: 4px solid var(--warning); }
+    .ssl-tile.critical { border-left: 4px solid var(--danger); }
+    .ssl-tile.expired { border-left: 4px solid var(--text-muted); }
+    .ssl-tile.error { border-left: 4px solid var(--unknown); }
+    
+    .ssl-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .ssl-host {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+    }
+    
+    .ssl-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 12px;
+    }
+    
+    .ssl-status.good { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .ssl-status.warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .ssl-status.critical { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .ssl-status.expired { background: rgba(107, 114, 128, 0.2); color: var(--text-muted); }
+    .ssl-status.error { background: rgba(107, 114, 128, 0.2); color: var(--unknown); }
+    
+    .ssl-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .ssl-subject {
+      color: var(--text-primary);
+      font-weight: 500;
+      font-size: 0.875rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .ssl-days {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .ssl-issuer {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    @media (max-width: 1200px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .timeline {
+        max-height: 400px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 16px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .server-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header-content {
+        flex-direction: column;
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <h1>🖥️ Monitoring Mode</h1>
+      <nav class="nav">
+        <a href="{% url 'dashboard' %}">Dashboard</a>
+        <a href="{% url 'monitoring_mode' %}" class="active">Monitoring</a>
+        <a href="{% url 'network_dashboard' %}">Network</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Statistics Overview -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Servers</div>
+        <div class="stat-value">{{ total_servers }}</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Online</div>
+        <div class="stat-value">{{ up_servers }}</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-label">Offline</div>
+        <div class="stat-value">{{ down_servers }}</div>
+      </div>
+      <div class="stat-card unknown">
+        <div class="stat-label">Unknown</div>
+        <div class="stat-value">{{ unknown_servers }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Uptime</div>
+        <div class="stat-value">{{ uptime_percentage }}%</div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="main-grid">
+      <!-- Network Overview -->
+      <div class="network-overview">
+        <h2 class="section-title">
+          🌐 Network Overview
+          <span class="live-indicator">
+            <span class="live-dot"></span>
+            LIVE
+          </span>
+        </h2>
+        
+        {% for server_type, type_servers in servers_by_type.items %}
+          <div class="server-type-section">
+            <div class="server-type-title">{{ server_type }} ({{ type_servers|length }})</div>
+            <div class="server-grid">
+              {% for server in type_servers %}
+                <a href="{% url 'server_detail' server.id %}" class="server-tile {% if server.pinned %}pinned{% endif %}">
+                  <div class="server-icon {{ server.server_type|lower }}">
+                    {{ server.server_type|first }}
+                  </div>
+                  <div class="server-info">
+                    <div class="server-name">{{ server.name }}</div>
+                    <div class="server-address">{{ server.ip_address }}:{{ server.port }}</div>
+                    <div class="server-status {{ server.last_status|lower }}">
+                      <span class="status-dot"></span>
+                      {{ server.last_status }}
+                    </div>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- SSL Certificate Overview -->
+      {% if ssl_certificates %}
+        <div class="ssl-overview">
+          <h2 class="section-title">
+            🔒 SSL Certificates
+            <span class="ssl-summary">
+              {% if ssl_summary.total > 0 %}
+                <span class="ssl-count good">{{ ssl_summary.good }}</span> good,
+                <span class="ssl-count warning">{{ ssl_summary.warning }}</span> warning,
+                <span class="ssl-count critical">{{ ssl_summary.critical }}</span> critical,
+                <span class="ssl-count expired">{{ ssl_summary.expired }}</span> expired
+              {% endif %}
+            </span>
+          </h2>
+          
+          <div class="ssl-grid">
+            {% for device_id, device_certs in ssl_certificates.items %}
+              {% for port, cert in device_certs.items %}
+                <div class="ssl-tile {{ cert.status }}">
+                  <div class="ssl-header">
+                    <div class="ssl-host">{{ cert.hostname }}:{{ cert.port }}</div>
+                    <div class="ssl-status {{ cert.status }}">
+                      {% if cert.status == 'good' %}✅{% elif cert.status == 'warning' %}⚠️{% elif cert.status == 'critical' %}🔴{% elif cert.status == 'expired' %}❌{% else %}❓{% endif %}
+                      {{ cert.status|title }}
+                    </div>
+                  </div>
+                  <div class="ssl-details">
+                    <div class="ssl-subject">{{ cert.subject_common_name }}</div>
+                    <div class="ssl-days">
+                      {% if cert.days_remaining >= 0 %}
+                        {{ cert.days_remaining }} days left
+                      {% else %}
+                        EXPIRED
+                      {% endif %}
+                    </div>
+                    <div class="ssl-issuer">{{ cert.issuer_common_name }}</div>
+                  </div>
+                </div>
+              {% endfor %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Event Timeline -->
+      <div class="timeline">
+        <h2 class="section-title">📊 Event Timeline</h2>
+        
+        {% if recent_events %}
+          {% for event in recent_events %}
+            <div class="event-item">
+              <div class="event-time">
+                {% if event.created_at %}
+                  {{ event.created_at|date:"H:i" }}
+                {% endif %}
+              </div>
+              <div class="event-content">
+                <div class="event-header">
+                  <span class="event-severity {{ event.severity|lower }}">
+                    {{ event.severity }}
+                  </span>
+                  <span class="event-server">{{ event.server.name }}</span>
+                </div>
+                <div class="event-title">{{ event.title }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="muted">No recent events</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    
+    // WebSocket connection management
+    function connectWebSocket() {
+      if (window.WebSocket) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws/monitoring/`);
+        
+        ws.onopen = function() {
+          console.log('Connected to monitoring WebSocket');
+          reconnectAttempts = 0;
+          updateLiveIndicator(true);
+        };
+        
+        ws.onmessage = function(event) {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        };
+        
+        ws.onclose = function() {
+          console.log('WebSocket disconnected');
+          updateLiveIndicator(false);
+          attemptReconnect();
+        };
+        
+        ws.onerror = function(error) {
+          console.error('WebSocket error:', error);
+          updateLiveIndicator(false);
+        };
+      }
+    }
+    
+    function handleWebSocketMessage(data) {
+      switch(data.type) {
+        case 'initial_data':
+          console.log('Received initial data');
+          break;
+        case 'server_update':
+          updateServerStatus(data.server);
+          break;
+        case 'new_event':
+          addNewEvent(data.event);
+          break;
+        default:
+          console.log('Unknown message type:', data.type);
+      }
+    }
+    
+    function updateServerStatus(serverData) {
+      // Find and update the server tile
+      const serverTiles = document.querySelectorAll('.server-tile');
+      serverTiles.forEach(tile => {
+        const link = tile.querySelector('a') || tile;
+        if (link.href.includes(`/servers/${serverData.id}/`)) {
+          const statusElement = tile.querySelector('.server-status');
+          if (statusElement) {
+            statusElement.className = `server-status ${serverData.last_status.toLowerCase()}`;
+            statusElement.innerHTML = `
+              <span class="status-dot"></span>
+              ${serverData.last_status}
+            `;
+          }
+        }
+      });
+      
+      // Update statistics
+      updateStatistics();
+    }
+    
+    function addNewEvent(eventData) {
+      const timeline = document.querySelector('.timeline');
+      const eventList = timeline.querySelector('.event-item')?.parentNode || timeline;
+      
+      const eventElement = document.createElement('div');
+      eventElement.className = 'event-item';
+      eventElement.innerHTML = `
+        <div class="event-time">${new Date(eventData.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+        <div class="event-content">
+          <div class="event-header">
+            <span class="event-severity ${eventData.severity.toLowerCase()}">${eventData.severity}</span>
+            <span class="event-server">${eventData.server_name}</span>
+          </div>
+          <div class="event-title">${eventData.title}</div>
+        </div>
+      `;
+      
+      // Add to the top of the timeline
+      const firstEvent = eventList.querySelector('.event-item');
+      if (firstEvent) {
+        eventList.insertBefore(eventElement, firstEvent);
+      } else {
+        eventList.appendChild(eventElement);
+      }
+      
+      // Remove old events if too many
+      const events = eventList.querySelectorAll('.event-item');
+      if (events.length > 50) {
+        events[events.length - 1].remove();
+      }
+    }
+    
+    function updateLiveIndicator(isConnected) {
+      const indicator = document.querySelector('.live-indicator');
+      if (indicator) {
+        if (isConnected) {
+          indicator.innerHTML = '<span class="live-dot"></span>LIVE';
+          indicator.style.color = 'var(--success)';
+        } else {
+          indicator.innerHTML = '<span class="live-dot"></span>RECONNECTING...';
+          indicator.style.color = 'var(--warning)';
+        }
+      }
+    }
+    
+    function attemptReconnect() {
+      if (reconnectAttempts < maxReconnectAttempts) {
+        reconnectAttempts++;
+        console.log(`Reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
+        setTimeout(connectWebSocket, 2000 * reconnectAttempts);
+      } else {
+        console.log('Max reconnection attempts reached');
+        // Fallback to periodic refresh
+        setTimeout(() => {
+          window.location.reload();
+        }, 30000);
+      }
+    }
+    
+    function updateStatistics() {
+      // Refresh statistics via API
+      fetch('/api/status/')
+        .then(response => response.json())
+        .then(data => {
+          const servers = data.servers || [];
+          const upCount = servers.filter(s => s.last_status === 'UP').length;
+          const downCount = servers.filter(s => s.last_status === 'DOWN').length;
+          const unknownCount = servers.filter(s => s.last_status === 'UNKNOWN').length;
+          const totalCount = servers.length;
+          const uptime = totalCount > 0 ? Math.round((upCount / totalCount) * 100) : 0;
+          
+          updateStatCard('Total Servers', totalCount);
+          updateStatCard('Online', upCount);
+          updateStatCard('Offline', downCount);
+          updateStatCard('Unknown', unknownCount);
+          updateStatCard('Uptime', uptime + '%');
+        })
+        .catch(error => console.error('Error updating statistics:', error));
+    }
+    
+    function updateStatCard(label, value) {
+      const cards = document.querySelectorAll('.stat-card');
+      cards.forEach(card => {
+        const labelElement = card.querySelector('.stat-label');
+        if (labelElement && labelElement.textContent === label) {
+          const valueElement = card.querySelector('.stat-value');
+          if (valueElement) {
+            valueElement.textContent = value;
+            // Add a brief highlight animation
+            valueElement.style.transition = 'color 0.3s';
+            valueElement.style.color = 'var(--accent)';
+            setTimeout(() => {
+              valueElement.style.color = 'var(--text-primary)';
+            }, 300);
+          }
+        }
+      });
+    }
+    
+    // Initialize WebSocket connection
+    connectWebSocket();
+    
+    // Fallback: periodic refresh every 30 seconds if WebSocket fails
+    setTimeout(() => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        window.location.reload();
+      }
+    }, 30000);
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'r' && e.ctrlKey) {
+        e.preventDefault();
+        window.location.reload();
+      }
+      if (e.key === 'm' && e.ctrlKey) {
+        e.preventDefault();
+        window.location.href = '/monitoring/';
+      }
+    });
+  </script>
+</body>
+</html>

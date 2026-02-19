@@ -1,0 +1,533 @@
+{% extends "monitor/base.html" %}
+
+{% block title %}{{ camera_name }} - CCTV{% endblock %}
+
+{% block extra_css %}
+<style>
+  .camera-container {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .video-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  
+  .video-player {
+    width: 100%;
+    height: 500px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  
+  .video-controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .info-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  
+  .info-item {
+    margin-bottom: 16px;
+  }
+  
+  .info-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  
+  .info-value {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    word-break: break-all;
+  }
+  
+  .status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  
+  .status-online { background: var(--success); }
+  .status-offline { background: var(--danger); }
+  .status-unknown { background: var(--unknown); }
+  
+  .rtsp-url {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    background: var(--bg-primary);
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  
+  .btn {
+    padding: 8px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+  }
+  
+  .btn:hover {
+    background: var(--accent-hover);
+  }
+  
+  .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  
+  .btn-secondary:hover {
+    background: var(--hover-bg);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="camera-container">
+  <div class="video-section">
+    <h1>{{ camera_name }}</h1>
+    
+    <div class="video-player" id="video-player">
+      <div id="player-container">
+        <!-- Video player will be loaded here -->
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p>Loading camera feed...</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="video-controls">
+      <button class="btn" onclick="startStream()">Start Stream</button>
+      <button class="btn btn-secondary" onclick="stopStream()">Stop Stream</button>
+      <button class="btn btn-secondary" onclick="takeSnapshot()">Take Snapshot</button>
+      <button class="btn btn-secondary" onclick="toggleFullscreen()">Fullscreen</button>
+    </div>
+  </div>
+  
+  <div class="info-section">
+    <h2>Camera Information</h2>
+    
+    <div class="info-item">
+      <div class="info-label">Device</div>
+      <div class="info-value">
+        <span class="status-indicator status-{{ device.status }}"></span>
+        {{ device.name }}
+      </div>
+    </div>
+    
+    <div class="info-item">
+      <div class="info-label">Location</div>
+      <div class="info-value">{{ device.name }}</div>
+    </div>
+    
+    <div class="info-item">
+      <div class="info-label">Camera Number</div>
+      <div class="info-value">Camera {{ camera_number }}</div>
+    </div>
+    
+    <div class="info-item">
+      <div class="info-label">Connection</div>
+      <div class="info-value">{{ device.domain }}:{{ device.port }}</div>
+    </div>
+    
+    <div class="info-item">
+      <div class="info-label">Status</div>
+      <div class="info-value">
+        <span class="status-indicator status-{{ device.status }}"></span>
+        {{ device.status|title }}
+      </div>
+    </div>
+    
+    <div class="info-item">
+      <div class="info-label">Last Checked</div>
+      <div class="info-value">
+        {% if device.last_checked %}
+          {{ device.last_checked|date:"Y-m-d H:i:s" }}
+        {% else %}
+          Never
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="info-item">
+      <div class="info-label">RTSP URL</div>
+      <div class="rtsp-url">{{ rtsp_url }}</div>
+    </div>
+    
+    <div class="info-item">
+      <div class="info-label">Actions</div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <a href="{% url 'cctv_device_detail' device.id %}" class="btn btn-secondary">View All Cameras</a>
+        <a href="{% url 'cctv_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+        <button class="btn btn-secondary" onclick="checkStatus()">Check Status</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const rtspUrl = "{{ rtsp_url|safe }}";
+const deviceName = "{{ device.name|safe }}";
+const cameraName = "{{ camera_name|safe }}";
+
+// Load video player when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadVideoPlayer();
+});
+
+function tryMJPEGPlayer(container, fallback) {
+  // MJPEG player using Dahua RPC
+  container.innerHTML = `
+    <img id="mjpeg-stream" src="/cctv/device/{{ device.id }}/camera/{{ camera_number }}/stream/" 
+         style="width: 100%; height: 100%; object-fit: cover;" 
+         alt="Live Camera Feed"
+         onerror="this.style.display='none'; fallback()">
+    <div class="player-overlay">
+      <div>${deviceName} - ${cameraName}</div>
+      <div style="font-size: 0.8rem;">MJPEG Live Stream</div>
+    </div>
+  `;
+  
+  // Check if image loads
+  const img = document.getElementById('mjpeg-stream');
+  img.onload = function() {
+    console.log('MJPEG stream loaded successfully');
+  };
+  
+  // Fallback after 5 seconds if no image
+  setTimeout(() => {
+    if (!img.complete || img.naturalWidth === 0) {
+      fallback();
+    }
+  }, 5000);
+}
+
+function trySnapshotPlayer(container, fallback) {
+  // Snapshot player using Dahua RPC
+  container.innerHTML = `
+    <div style="width: 100%; height: 100%; position: relative;">
+      <img id="snapshot-image" style="width: 100%; height: 100%; object-fit: cover;" alt="Camera Snapshot">
+      <div class="player-overlay">
+        <div>${deviceName} - ${cameraName}</div>
+        <div style="font-size: 0.8rem;">Live Snapshot (updates every 2s)</div>
+      </div>
+    </div>
+  `;
+  
+  // Update snapshot every 2 seconds
+  function updateSnapshot() {
+    fetch('/cctv/device/{{ device.id }}/camera/{{ camera_number }}/snapshot/')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.snapshot) {
+          document.getElementById('snapshot-image').src = data.snapshot;
+        }
+      })
+      .catch(() => {
+        // Stop updating on error
+        clearInterval(snapshotInterval);
+      });
+  }
+  
+  // Initial snapshot
+  updateSnapshot();
+  
+  // Update every 2 seconds
+  const snapshotInterval = setInterval(updateSnapshot, 2000);
+  
+  // Store interval for cleanup
+  window.snapshotInterval = snapshotInterval;
+}
+
+function loadVideoPlayer() {
+  const container = document.getElementById('player-container');
+  
+  // Try different video player methods with Dahua RPC
+  const players = [
+    tryMJPEGPlayer,      // Direct MJPEG stream
+    trySnapshotPlayer,   // Live snapshots
+    tryHLSPlayer,        // HLS fallback
+    tryWebRTCPlayer,     // WebRTC fallback
+    showFallbackPlayer   // Final fallback
+  ];
+  
+  let playerIndex = 0;
+  
+  function tryNextPlayer() {
+    if (playerIndex < players.length) {
+      players[playerIndex](container, tryNextPlayer);
+      playerIndex++;
+    } else {
+      showFallbackPlayer(container);
+    }
+  }
+  
+  tryNextPlayer();
+}
+
+function tryHLSPlayer(container, fallback) {
+  // Check if HLS is available
+  if (typeof Hls !== 'undefined') {
+    container.innerHTML = `
+      <video id="hls-video" controls autoplay muted style="width: 100%; height: 100%;">
+        <source src="/media/streams/device_{{ device.id }}_cam_{{ camera_number }}.m3u8" type="application/x-mpegURL">
+        Your browser does not support HLS video.
+      </video>
+      <div class="player-overlay">
+        <div>${deviceName} - ${cameraName}</div>
+        <div style="font-size: 0.8rem;">HLS Stream</div>
+      </div>
+    `;
+    
+    const video = document.getElementById('hls-video');
+    const hls = new Hls();
+    hls.loadSource('/media/streams/device_{{ device.id }}_cam_{{ camera_number }}.m3u8');
+    hls.attachMedia(video);
+    
+    hls.on(Hls.Events.ERROR, function() {
+      fallback();
+    });
+    
+    video.play().catch(() => fallback());
+  } else {
+    fallback();
+  }
+}
+
+function tryWebRTCPlayer(container, fallback) {
+  // WebRTC player (requires WebRTC server)
+  container.innerHTML = `
+    <video id="webrtc-video" autoplay muted style="width: 100%; height: 100%;"></video>
+    <div class="player-overlay">
+      <div>${deviceName} - ${cameraName}</div>
+      <div style="font-size: 0.8rem;">WebRTC Stream</div>
+    </div>
+  `;
+  
+  // WebRTC connection would be established here
+  setTimeout(() => fallback(), 2000);
+}
+
+function tryRTSPPlayer(container, fallback) {
+  // RTSP player (requires browser plugin)
+  container.innerHTML = `
+    <object type="application/x-rtsp" data="${rtspUrl}" width="100%" height="100%">
+      <param name="autoplay" value="true">
+      <param name="controls" value="true">
+      <embed src="${rtspUrl}" type="application/x-rtsp" width="100%" height="100%" autoplay="true" controls="true">
+    </object>
+    <div class="player-overlay">
+      <div>${deviceName} - ${cameraName}</div>
+      <div style="font-size: 0.8rem;">RTSP (requires plugin)</div>
+    </div>
+  `;
+  
+  setTimeout(() => fallback(), 3000);
+}
+
+function showFallbackPlayer(container) {
+  container.innerHTML = `
+    <div class="fallback-content">
+      <div class="camera-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <circle cx="8" cy="10" r="2"/>
+          <path d="M14 10l4 4-4 4"/>
+        </svg>
+      </div>
+      <h3>${cameraName}</h3>
+      <p style="color: #888; margin: 8px 0;">Live Camera Feed</p>
+      
+      <div class="rtsp-info">
+        <p style="font-size: 0.8rem; margin-bottom: 8px;">RTSP Stream URL:</p>
+        <code style="background: #f5f5f5; padding: 8px; border-radius: 4px; display: block; font-size: 0.7rem; word-break: break-all;">
+          ${rtspUrl}
+        </code>
+      </div>
+      
+      <div class="player-actions">
+        <button onclick="copyRTSP('${rtspUrl}')" class="btn btn-primary">Copy RTSP URL</button>
+        <button onclick="openVLC('${rtspUrl}')" class="btn btn-secondary">Open in VLC</button>
+        <button onclick="startStream()" class="btn btn-secondary">Start Web Stream</button>
+      </div>
+      
+      <div class="stream-instructions">
+        <p><strong>To view this camera:</strong></p>
+        <ul>
+          <li>Use VLC Media Player: File → Open Network Stream</li>
+          <li>Use any RTSP-compatible player</li>
+          <li>Copy URL to mobile apps like VLC or iSpy</li>
+          <li>Configure media server for web viewing</li>
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+function startStream() {
+  const container = document.getElementById('player-container');
+  container.innerHTML = `
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Starting web stream...</p>
+      <p style="font-size: 0.8rem;">Converting RTSP to web format</p>
+    </div>
+  `;
+  
+  // Simulate stream starting
+  setTimeout(() => {
+    alert('Web stream started!\n\nThis would:\n1. Start FFmpeg to convert RTSP to HLS\n2. Enable web-compatible streaming\n3. Allow viewing in browser\n\nRTSP URL: ' + rtspUrl);
+    showFallbackPlayer(container);
+  }, 2000);
+}
+
+function stopStream() {
+  alert('Stopping web stream...');
+}
+
+function takeSnapshot() {
+  alert('Taking snapshot...\n\nThis would capture a still frame from the camera stream.');
+}
+
+function toggleFullscreen() {
+  const player = document.getElementById('video-player');
+  if (player.requestFullscreen) {
+    player.requestFullscreen();
+  } else if (player.webkitRequestFullscreen) {
+    player.webkitRequestFullscreen();
+  } else if (player.msRequestFullscreen) {
+    player.msRequestFullscreen();
+  }
+}
+
+function copyRTSP(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    alert('RTSP URL copied to clipboard!\n\n' + url);
+  }).catch(err => {
+    alert('Failed to copy URL');
+  });
+}
+
+function openVLC(url) {
+  alert('To open in VLC:\n\n1. Open VLC Media Player\n2. File → Open Network Stream\n3. Paste this URL:\n' + url + '\n4. Click Play');
+}
+
+function checkStatus() {
+  fetch('{% url "check_cctv_status" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: 'device_id={{ device.id }}'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Status checked: ' + data.status);
+      location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error: ' + error.message);
+  });
+}
+</script>
+
+<style>
+  .loading-spinner {
+    text-align: center;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .player-overlay {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+  
+  .fallback-content {
+    text-align: center;
+    padding: 32px;
+  }
+  
+  .camera-icon {
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  
+  .rtsp-info {
+    margin: 16px 0;
+    text-align: left;
+  }
+  
+  .player-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .stream-instructions {
+    text-align: left;
+    margin-top: 16px;
+  }
+  
+  .stream-instructions ul {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+</style>
+{% endblock %}

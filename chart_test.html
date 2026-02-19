@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chart Test</title>
+    <style>
+        .metric-chart {
+            height: 200px;
+            background: #1e293b;
+            border-radius: 8px;
+            margin: 20px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .metric-chart canvas {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chart Test</h1>
+    <div class="metric-chart">
+        <canvas id="chart-test" width="300" height="200"></canvas>
+    </div>
+    
+    <script>
+        // Test chart drawing with sample data
+        function drawTestChart() {
+            console.log('Drawing test chart');
+            const canvas = document.getElementById('chart-test');
+            if (!canvas) {
+                console.error('Canvas not found');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Could not get canvas context');
+                return;
+            }
+            
+            console.log('Canvas:', canvas);
+            console.log('Context:', ctx);
+            console.log('Dimensions:', canvas.width, 'x', canvas.height);
+            
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, w, h);
+            
+            // Draw border
+            ctx.strokeStyle = '#334155';
+            ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+            
+            // Draw sample data line
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const points = [
+                {x: 0, y: h * 0.8},
+                {x: w * 0.25, y: h * 0.6},
+                {x: w * 0.5, y: h * 0.4},
+                {x: w * 0.75, y: h * 0.3},
+                {x: w, y: h * 0.2}
+            ];
+            
+            points.forEach((point, i) => {
+                if (i === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // Draw grid lines
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 4; i++) {
+                const y = h * (i / 4);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+            
+            console.log('Test chart drawn successfully');
+        }
+        
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, drawing test chart');
+            drawTestChart();
+        });
+    </script>
+</body>
+</html>

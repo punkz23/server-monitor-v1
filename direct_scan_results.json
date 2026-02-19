@@ -1,0 +1,24 @@
+{
+  "scan_time": "2025-12-27T10:34:48.623850",
+  "target_network": "172.10.10.0/24",
+  "scan_method": "direct_ping_arp_port",
+  "total_devices_found": 1,
+  "ping_responsive": 1,
+  "arp_entries": 0,
+  "devices": [
+    {
+      "ip": "172.10.10.10",
+      "status": "alive",
+      "pingable": true,
+      "response_time": 1,
+      "ttl": 64,
+      "open_ports": [
+        22,
+        53
+      ],
+      "port_count": 2,
+      "arp_entry": false,
+      "device_type": "Linux/Unix Device (SSH)"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "ip_address": "172.10.10.1",
+    "mac_address": "00:11:22:33:44:55",
+    "hostname": "Firewall-Gateway",
+    "vendor": "Sophos",
+    "device_type": "firewall",
+    "source": "mock_data",
+    "open_ports": {
+      "443": true,
+      "22": true,
+      "80": true
+    }
+  },
+  {
+    "ip_address": "172.10.10.10",
+    "mac_address": "AA:BB:CC:DD:EE:FF",
+    "hostname": "Core-Switch",
+    "vendor": "Cisco",
+    "device_type": "switch",
+    "source": "mock_data",
+    "open_ports": {
+      "80": true,
+      "443": true,
+      "22": true
+    }
+  },
+  {
+    "ip_address": "172.10.10.20",
+    "mac_address": "B8:27:EB:12:34:56",
+    "hostname": "Security-Camera-01",
+    "vendor": "Unknown",
+    "device_type": "unknown",
+    "source": "mock_data",
+    "open_ports": {
+      "80": true,
+      "554": true
+    }
+  },
+  {
+    "ip_address": "172.10.10.50",
+    "mac_address": "00:1A:2B:3C:4D:5E",
+    "hostname": "Access-Point-01",
+    "vendor": "Apple",
+    "device_type": "mobile",
+    "source": "mock_data",
+    "open_ports": {
+      "80": true,
+      "443": true
+    }
+  },
+  {
+    "ip_address": "172.10.10.100",
+    "mac_address": "28:CF:E9:87:65:43",
+    "hostname": "Server-01",
+    "vendor": "Apple",
+    "device_type": "pc",
+    "source": "mock_data",
+    "open_ports": {
+      "22": true,
+      "80": true,
+      "443": true,
+      "3389": true
+    }
+  }
+]

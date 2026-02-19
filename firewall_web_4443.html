@@ -1,0 +1,115 @@
+<!DOCTYPE HTML>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html lang="en">
+<head>
+
+<title>User Portal</title>
+<link href="/themes/lite1/css/typography.css?version=2f300a18-b01e-4fee-860a-3b3d8d259058" rel="stylesheet" type="text/css" />
+<link rel="stylesheet" href="/themes/lite1/css/loginstylesheet.css?ver=2f300a18-b01e-4fee-860a-3b3d8d259058" type="text/css">
+<LINK REL="ICON" HREF="/images/favicon.ico?ver=2f300a18-b01e-4fee-860a-3b3d8d259058">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<script type="text/javascript" src="/javascript/validation/JavaConstants.js?ver=2f300a18-b01e-4fee-860a-3b3d8d259058"></script>
+<script type="text/javascript" src="/javascript/validation/OEM.js?ver=2f300a18-b01e-4fee-860a-3b3d8d259058"></script>
+</head>
+<script>
+var OWN_STATUS = "2";
+var AUXILIARY = "1";
+</script>
+
+<script>
+var isUserOAuth = false;
+</script>
+<body  onload="document.forms[0].username.focus(); document.forms[0].username.select();initLogin();">
+<noscript>
+	<div align="center">
+		<h2>Your browser does not support JavaScript or it is disabled!<br>Without JavaScript support user portal will not work.</h2>
+	</div>
+</noscript>
+<form onsubmit="return false;" method="post">
+<input type="hidden" name="login_username" value="" >
+<input type=hidden name=mode value="1" >
+<div id="htmlData">
+	<div id="wrapper">
+	    <div id="header">
+	    	<div class="language_select">
+	        	<select name="languageid" id="languageid" onchange="loadLanguageFile(this.value)">
+	            </select>
+	        </div>
+	    </div>
+		<div id="content-area">
+	    	<div id="sectionL" class="left">
+	        	
+	        	<div class="login_form" id="credentialdiv">
+	        	
+	            	<img src="/images/logo/group-small-on-dark.png?v=2f300a18-b01e-4fee-860a-3b3d8d259058" alt="" style="border:0px;" />
+	                <div class="login_detail" id="normalTBody" style="margin-bottom:8px">
+	                	<label id="Language.Username"></label>
+	                    <input name="username" type="text" id="username" size="30" maxlength="60" />
+	                    
+	                   <label id="Language.Password"></label>
+	                   <input name="password" type="password" id="password" value="" size="30" autocomplete="off" maxlength="60" onFocus="if(this.value=='Password')this.value='';" />
+
+						
+
+						<input  onclick="return callLogin()" class="blue_btn" name="loginbutton" value="Login" type="submit"/>
+	                </div>
+	                <!-- OTP section -->
+			<div id="twofactorTBody" style="display:none">
+				<label id="verificationCode"></label>
+				<input name="otp" type="password" id="otp" value="" size="30" autocomplete="off" maxlength="60"/>
+				<input onclick="return callLogin()" class="blue_btn" type="submit" value="Continue" name="continuebutton" />
+			</div> 
+	                <div id="ssolink" style="display:none;text-align:center">
+                    	<a onclick="redirectToSSO()" id="authlink"></a>
+                    </div>
+	                
+	                <span class="small_txt" id="copyrightyear"></span>
+	            </div>
+	            
+	            <div class="login_form" style="display:none" id="ssodiv">
+	            
+	            <img src="/images/logo/group-small-on-dark.png?v=2f300a18-b01e-4fee-860a-3b3d8d259058" alt="" style="border:0px;margin:0px 30px" />
+	            <input onclick="redirectToSSO()" class="blue_btn" name="ssologinbutton" value="Single sign-on" type="button"/>
+	            <input onclick="displayCredDiv()" style="background: #fff;color: #1987CB;border: 1px solid #1987CB;" class="blue_btn" name="credloginbutton" value="Credential Login" type="button"/>
+	            <span class="small_txt" id="copyrightyear2"></span>
+	            </div>
+								
+				<div id="message"></div>
+	        </div>
+	        
+	        <div id="sectionR" class="right">
+	        	<img src="/images/bannerUP.png?v=2f300a18-b01e-4fee-860a-3b3d8d259058" alt="" style="border:0px;" />
+	        </div>
+	    </div>
+	</div>
+</div>
+<script type="text/javascript" src="/javascript/jQueryYUI.js?v=2f300a18-b01e-4fee-860a-3b3d8d259058"></script>
+<script type="text/javascript" src="/javascript/react-combo.min.js?v=2f300a18-b01e-4fee-860a-3b3d8d259058"></script>
+<script type="text/javascript" src="/javascript/common_min.js?v=2f300a18-b01e-4fee-860a-3b3d8d259058"></script>
+<script type="text/javascript">
+	var langObj = Cyberoam.LangService.getPreferredLangDetails();
+	var script = document.createElement('script');
+	script.src = '/javascript/lang/' + langObj['name'] + '/common.js?v=2f300a18-b01e-4fee-860a-3b3d8d259058';
+	document.head.appendChild(script);
+</script>
+<script type="text/javascript" src="/javascript/validation/UserPortalLogin.js?v=2f300a18-b01e-4fee-860a-3b3d8d259058"></script>
+<script type="text/javascript">
+Cyberoam.setContextPath("/userportal");
+</script>
+
+</form>
+</body>
+</html>
+

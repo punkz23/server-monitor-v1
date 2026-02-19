@@ -1,0 +1,955 @@
+{% extends "monitor/base.html" %}
+{% load static %}
+{% load failover_filters %}
+
+{% block title %}{{ isp.name }} - ISP Connection{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary: #3b82f6;
+    --primary-dark: #2563eb;
+    --secondary: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #06b6d4;
+    --dark: #1e293b;
+    --darker: #0f172a;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --card-bg: #1e293b;
+    --header-bg: #0f172a;
+    --success: #22c55e;
+    --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    --gradient-success: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+    --gradient-danger: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+}
+
+.isp-detail {
+    padding: 1.5rem;
+    background: var(--darker);
+    min-height: 100vh;
+}
+
+/* Enhanced Header */
+.isp-header {
+    background: var(--header-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.isp-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+.isp-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+}
+
+.isp-title-section {
+    flex: 1;
+}
+
+.isp-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 0.5rem 0;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.isp-subtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.status-healthy {
+    color: var(--success);
+    border-color: var(--success);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.status-warning {
+    color: var(--warning);
+    border-color: var(--warning);
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.status-degraded {
+    color: #f97316;
+    border-color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+}
+
+.status-critical {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.status-healthy .status-indicator {
+    background: var(--success);
+}
+
+.status-warning .status-indicator {
+    background: var(--warning);
+}
+
+.status-degraded .status-indicator {
+    background: #f97316;
+}
+
+.status-critical .status-indicator {
+    background: var(--danger);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.info-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1rem;
+    transition: all 0.3s ease;
+}
+
+.info-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+}
+
+.info-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    color: var(--text);
+    font-weight: 700;
+    font-size: 1.125rem;
+}
+
+/* Health Score */
+.health-score-container {
+    background: var(--gradient-primary);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.health-score-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.health-score-title {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.health-score-value {
+    font-size: 3rem;
+    font-weight: 800;
+    color: white;
+    text-align: center;
+    margin: 0;
+}
+
+.health-score-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.health-score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e, #10b981, #06b6d4);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+/* Enhanced Metrics Grid */
+.metrics-section {
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.refresh-button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.refresh-button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border-color: var(--primary);
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-primary);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.metric-card:hover::before {
+    opacity: 1;
+}
+
+.metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.metric-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.metric-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.metric-status-good {
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--success);
+}
+
+.metric-status-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+}
+
+.metric-status-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
+.metric-chart {
+    height: 200px;
+    background: var(--dark);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.metric-chart canvas {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    background: transparent;
+}
+
+.metric-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.metric-current {
+    display: flex;
+    flex-direction: column;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0;
+}
+
+.metric-unit {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.metric-trend {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.trend-up {
+    color: var(--success);
+}
+
+.trend-down {
+    color: var(--danger);
+}
+
+.trend-stable {
+    color: var(--text-muted);
+}
+
+/* Enhanced Failover Section */
+.failover-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+}
+
+.failover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.failover-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.failover-count {
+    background: var(--primary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.failover-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.failover-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.failover-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(4px);
+}
+
+.failover-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--gradient-danger);
+    border-radius: 4px 0 0 4px;
+}
+
+.failover-header-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.failover-time {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.failover-duration {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.failover-reason {
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.failover-details {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* Empty States */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+}
+
+.empty-state h3 {
+    color: var(--text);
+    margin-bottom: 0.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .isp-detail {
+        padding: 1rem;
+    }
+    
+    .isp-header-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .isp-title {
+        font-size: 2rem;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="isp-detail">
+    <!-- Enhanced Header -->
+    <div class="isp-header">
+        <div class="isp-header-content">
+            <div class="isp-title-section">
+                <h1 class="isp-title">{{ isp.name }}</h1>
+                <p class="isp-subtitle">{{ isp.get_isp_type_display }} Connection</p>
+                
+                <!-- Info Grid -->
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Type</div>
+                        <div class="info-value">{{ isp.get_isp_type_display }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Gateway</div>
+                        <div class="info-value">{{ isp.gateway_ip }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Advertised Speed</div>
+                        <div class="info-value">{{ isp.bandwidth_mbps }} Mbps</div>
+                    </div>
+                    {% if isp.primary_connection %}
+                    <div class="info-item" style="background: rgba(245, 158, 11, 0.2); border-color: var(--warning);">
+                        <div class="info-label" style="color: var(--warning);">Status</div>
+                        <div class="info-value" style="color: var(--warning);">PRIMARY</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Status Badge -->
+            {% if health_score >= 80 %}
+                <div class="status-badge status-healthy">
+                    <div class="status-indicator"></div>
+                    <span>Healthy</span>
+                </div>
+            {% elif health_score >= 60 %}
+                <div class="status-badge status-warning">
+                    <div class="status-indicator"></div>
+                    <span>Warning</span>
+                </div>
+            {% elif health_score >= 40 %}
+                <div class="status-badge status-degraded">
+                    <div class="status-indicator"></div>
+                    <span>Degraded</span>
+                </div>
+            {% else %}
+                <div class="status-badge status-critical">
+                    <div class="status-indicator"></div>
+                    <span>Critical</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Health Score Section -->
+    <div class="health-score-container">
+        <div class="health-score-header">
+            <h2 class="health-score-title">Overall Health Score</h2>
+        </div>
+        <div class="health-score-value">{{ health_score }}%</div>
+        <div class="health-score-bar">
+            <div class="health-score-fill" data-width="{{ health_score }}"></div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
+        <a href="{% url 'isp_edit' isp.id %}" class="btn btn-secondary">Edit Connection</a>
+        <a href="{% url 'network_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+
+    <!-- Metrics Section -->
+    <div class="metrics-grid">
+        {% for metric_name, metric_data in metrics_by_name.items %}
+            <div class="metric-card">
+                <h3 class="metric-title">{{ metric_name|title }}</h3>
+                <div class="metric-chart">
+                    <canvas id="chart-{{ metric_name|slugify }}" width="300" height="200"></canvas>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-muted);">
+                    {% with latest_metric=metric_data|last %}
+                        {% if metric_name == "dns_status" or metric_name == "internet_status" %}
+                            Latest: {% if latest_metric.value == 1 %}Up{% else %}Down{% endif %}
+                        {% else %}
+                            Latest: {{ latest_metric.value|format_decimal }} {{ latest_metric.unit }}
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <h3>No Metrics Available</h3>
+                <p>No monitoring data has been collected for this ISP connection yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Enhanced Failover Events Section -->
+    <div class="failover-section">
+        <div class="failover-header">
+            <h2 class="failover-title">Connection Failover History</h2>
+            {% if failover_events %}
+                <div class="failover-count">{{ failover_events|length }} Events</div>
+            {% endif %}
+        </div>
+        {% if failover_events %}
+            <div class="failover-list">
+                {% for failover in failover_events %}
+                    <div class="failover-item">
+                        <div class="failover-header">
+                            <div class="failover-time">{{ failover.failover_time|date:"Y-m-d H:i:s" }}</div>
+                            {% if failover.duration_minutes %}
+                                <div class="failover-duration">{{ failover.duration_minutes }} minutes</div>
+                            {% endif %}
+                        </div>
+                        <div class="failover-reason">{{ failover.reason|human_failover_reason }}</div>
+                        <div class="failover-details">
+                            <div class="failover-path">
+                                <strong>Connection:</strong> {{ failover.primary_isp.name }}
+                                {% if failover.backup_isp %} 
+                                    <span style="color: var(--warning);">→ Switched to {{ failover.backup_isp.name }}</span>
+                                {% endif %}
+                            </div>
+                            {% if failover.recovery_time %}
+                                <div class="failover-recovery">
+                                    <strong>Recovered:</strong> {{ failover.recovery_time|date:"Y-m-d H:i:s" }}
+                                </div>
+                            {% endif %}
+                            {% if failover.duration_minutes %}
+                                <div class="failover-duration-text">
+                                    <strong>Downtime:</strong> {{ failover.duration_minutes|format_duration }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No Failover Events</h3>
+                <p>This ISP connection has not experienced any failover events.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+/* Django-generated data - embedded to avoid linting issues */
+</script>
+<script type="application/json" id="isp-data">
+{
+    "id": {{ isp.id|safe }},
+    "metrics": {{ metrics_json|safe }}
+}
+</script>
+<script>
+// Parse the embedded JSON data
+try {
+    window.ISP_DATA = JSON.parse(document.getElementById('isp-data').textContent);
+    console.log('ISP Data loaded successfully:', window.ISP_DATA);
+} catch (e) {
+    console.error('Failed to parse ISP data:', e);
+}
+
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded - Starting chart initialization');
+    
+    // Set health score bar width dynamically
+    const healthScoreFill = document.querySelector('.health-score-fill');
+    if (healthScoreFill) {
+        const width = healthScoreFill.getAttribute('data-width');
+        if (width) {
+            healthScoreFill.style.width = width + '%';
+        }
+    }
+    
+    if (!window.ISP_DATA || !window.ISP_DATA.metrics) {
+        console.error('No ISP data available');
+        console.log('window.ISP_DATA:', window.ISP_DATA);
+        return;
+    }
+    
+    const ISP_ID = window.ISP_DATA.id;
+    const charts = {};
+    let socket = null;
+    let reconnectTimer = null;
+    
+    // Chart configuration from Django
+    const chartConfigs = window.ISP_DATA.metrics;
+    console.log('Chart configs available:', Object.keys(chartConfigs));
+    console.log('Sample chart config:', chartConfigs[Object.keys(chartConfigs)[0]]);
+    
+    // Initialize charts for each metric
+    console.log('Available canvas elements:', document.querySelectorAll('[id^="chart-"]'));
+    
+    Object.keys(chartConfigs).forEach(function(metricName) {
+        const metricId = metricName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        console.log(`Processing metric: ${metricName} -> ${metricId}`);
+        
+        const canvas = document.getElementById('chart-' + metricId);
+        console.log(`Canvas element for ${metricId}:`, canvas);
+        
+        charts[metricId] = {
+            canvas: canvas,
+            ctx: null,
+            points: chartConfigs[metricName] || []
+        };
+        
+        console.log(`Chart ${metricId}:`, {
+            hasCanvas: !!charts[metricId].canvas,
+            points: charts[metricId].points.length,
+            samplePoint: charts[metricId].points[0]
+        });
+        
+        if (charts[metricId].canvas) {
+            charts[metricId].ctx = charts[metricId].canvas.getContext('2d');
+            console.log(`Got context for ${metricId}`);
+            drawChart(metricId);
+        } else {
+            console.error(`Canvas not found for chart-${metricId}`);
+        }
+    });
+    
+    function drawChart(metricId) {
+        console.log(`Drawing chart for ${metricId}`);
+        const chart = charts[metricId];
+        if (!chart || !chart.ctx) {
+            console.error(`Chart ${metricId} missing canvas or context`);
+            return;
+        }
+        
+        const canvas = chart.canvas;
+        const ctx = chart.ctx;
+        const points = chart.points;
+        
+        console.log(`Chart ${metricId} canvas:`, canvas);
+        console.log(`Chart ${metricId} points:`, points.length, points);
+        
+        const w = canvas.width;
+        const h = canvas.height;
+        const padL = 40;
+        const padR = 10;
+        const padT = 10;
+        const padB = 30;
+        
+        console.log(`Canvas dimensions: ${w}x${h}`);
+        
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = '#334155';
+        ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+        
+        if (!points.length) {
+            console.log(`No data points for ${metricId}`);
+            ctx.fillStyle = '#64748b';
+            ctx.font = '12px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No data', w/2, h/2);
+            return;
+        }
+        
+        const values = points.map(p => p.value);
+        const nums = values.filter(v => typeof v === 'number');
+        if (!nums.length) return;
+        
+        const min = Math.min(...nums);
+        const max = Math.max(...nums);
+        const range = (max - min) || 1;
+        
+        function xFor(i, n) {
+            if (n <= 1) return padL;
+            return padL + (w - padL - padR) * (i / (n - 1));
+        }
+        
+        function yFor(v) {
+            if (typeof v !== 'number') return null;
+            const t = (v - min) / range;
+            return padT + (h - padT - padB) * (1 - t);
+        }
+        
+        // Draw grid lines
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i <= 4; i++) {
+            const y = padT + (h - padT - padB) * (i / 4);
+            ctx.beginPath();
+            ctx.moveTo(padL, y);
+            ctx.lineTo(w - padR, y);
+            ctx.stroke();
+        }
+        
+        // Draw data line
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        let started = false;
+        points.forEach((point, i) => {
+            const x = xFor(i, points.length);
+            const y = yFor(point.value);
+            if (y !== null) {
+                if (!started) {
+                    ctx.moveTo(x, y);
+                    started = true;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+        });
+        ctx.stroke();
+        
+        // Draw y-axis labels
+        ctx.fillStyle = '#64748b';
+        ctx.font = '10px system-ui';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        
+        for (let i = 0; i <= 4; i++) {
+            const value = min + range * (1 - i / 4);
+            const y = padT + (h - padT - padB) * (i / 4);
+            ctx.fillText(value.toFixed(2), padL - 5, y);
+        }
+        
+        // Draw x-axis labels (time)
+        if (points.length > 1) {
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            
+            // Show first and last timestamps
+            const firstTime = points[0].timestamp ? new Date(points[0].timestamp) : null;
+            const lastTime = points[points.length - 1].timestamp ? new Date(points[points.length - 1].timestamp) : null;
+            
+            if (firstTime) {
+                ctx.fillText(firstTime.toLocaleTimeString().slice(0, 5), padL, h - padB + 5);
+            }
+            if (lastTime && points.length > 1) {
+                ctx.fillText(lastTime.toLocaleTimeString().slice(0, 5), w - padR, h - padB + 5);
+            }
+        }
+    }
+    
+    // Fetch initial data
+    async function fetchMetrics() {
+        try {
+            const response = await fetch(`/network/isp/${ISP_ID}/api/metrics/?range=1h`);
+            const data = await response.json();
+            
+            Object.keys(data.metrics || {}).forEach(metricName => {
+                const metricId = metricName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                if (charts[metricId]) {
+                    charts[metricId].points = data.metrics[metricName];
+                    drawChart(metricId);
+                }
+            });
+        } catch (error) {
+            console.error('Failed to fetch metrics:', error);
+        }
+    }
+    
+    // WebSocket connection for real-time updates
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/status/`;
+        
+        socket = new WebSocket(wsUrl);
+        
+        socket.onopen = function() {
+            console.log('WebSocket connected');
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+        };
+        
+        socket.onmessage = function(event) {
+            try {
+                const message = JSON.parse(event.data);
+                // Handle real-time updates if needed
+                if (message.type === 'isp.status') {
+                    // Update charts with new data
+                    fetchMetrics();
+                }
+            } catch (error) {
+                console.error('WebSocket message error:', error);
+            }
+        };
+        
+        socket.onclose = function() {
+            console.log('WebSocket disconnected, attempting to reconnect...');
+            if (!reconnectTimer) {
+                reconnectTimer = setTimeout(connectWebSocket, 5000);
+            }
+        };
+        
+        socket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+    
+    // Initialize
+    fetchMetrics();
+    connectWebSocket();
+    
+    // Refresh data periodically
+    setInterval(fetchMetrics, 30000); // Every 30 seconds
+    
+}); // Close DOMContentLoaded
+</script>
+
+{% endblock %}

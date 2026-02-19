@@ -1,0 +1,1018 @@
+{% extends "monitor/base.html" %}
+{% load static %}
+{% load tz %}
+{% load monitor_tags %}
+
+{% block title %}Dashboard Redesign - ServerWatch{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --card-width: 320px;
+        --grid-gap: 20px;
+        --grid-columns: 3;
+        --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        --card-shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.6);
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        letter-spacing: -0.01em;
+    }
+
+    h1, h2, h3 {
+        letter-spacing: -0.02em;
+    }
+
+    #dashboard-container {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Category Tabs/Navigation */
+    .category-tabs {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 4px 4px 16px 4px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 8px;
+        scrollbar-width: none;
+    }
+
+    .category-tab {
+        padding: 10px 24px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .category-tab:hover {
+        border-color: var(--accent);
+        color: var(--text-primary);
+        transform: translateY(-2px);
+    }
+
+    .category-tab.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+    }
+
+    /* Base Server Card */
+    .server-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        box-shadow: var(--card-shadow);
+    }
+
+    .server-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        border-color: var(--accent);
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    .server-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: var(--accent);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .server-card:hover::before {
+        opacity: 1;
+    }
+
+    .status-badge {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        position: relative;
+    }
+
+    .status-badge::after {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        right: -4px;
+        bottom: -4px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        opacity: 0.2;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 0.2; }
+        50% { transform: scale(1.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 0.2; }
+    }
+
+    .server-card.hidden {
+        display: none;
+    }
+
+    .server-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--accent);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .server-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .status-badge {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        box-shadow: 0 0 8px currentColor;
+    }
+
+    .status-badge.up { background-color: var(--success); color: var(--success); }
+    .status-badge.down { background-color: var(--danger); color: var(--danger); }
+    .status-badge.unknown { background-color: var(--unknown); color: var(--unknown); }
+
+    .ssl-badge {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-right: 8px;
+        display: none; /* Hidden by default */
+    }
+
+    .ssl-badge.good { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid #28a745; display: inline-block; }
+    .ssl-badge.warning { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid #ffc107; display: inline-block; }
+    .ssl-badge.critical, .ssl-badge.expired { background: rgba(220, 53, 69, 0.2); color: #dc3545; border: 1px solid #dc3545; display: inline-block; }
+
+    .card-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    .card-metric {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .metric-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+
+    .metric-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        font-family: 'SF Mono', monospace;
+    }
+
+    .progress-bar-container {
+        height: 4px;
+        background: var(--bg-tertiary);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 4px;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
+
+    .progress-bar.warning { background: var(--warning); }
+    .progress-bar.danger { background: var(--danger); }
+
+    .card-footer {
+        margin-top: auto;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* Side Panel (Drawer) */
+    #side-panel {
+        position: fixed;
+        top: 0;
+        right: -450px;
+        width: 400px;
+        height: 100vh;
+        background: var(--bg-secondary);
+        border-left: 1px solid var(--border);
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        z-index: 1001;
+        transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        padding: 24px;
+        overflow-y: auto;
+    }
+
+    #side-panel.open {
+        right: 0;
+    }
+
+    #panel-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    #panel-backdrop.show {
+        display: block;
+        opacity: 1;
+    }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .panel-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 4px;
+        line-height: 1;
+        transition: color 0.2s;
+    }
+
+    .panel-close:hover {
+        color: var(--danger);
+    }
+
+    .panel-section {
+        margin-bottom: 32px;
+    }
+
+    .panel-section-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+        :root {
+            --card-width: 100%;
+            --grid-gap: 16px;
+        }
+        
+        #side-panel {
+            width: 100%;
+            right: -100%;
+        }
+
+        .container {
+            padding: 16px;
+        }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .server-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--grid-columns), 1fr);
+        gap: var(--grid-gap);
+        transition: all 0.3s ease;
+    }
+
+    .btn-sm {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+    }
+
+    .btn-sm.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="dashboard-container">
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+        <div>
+            <h1 style="margin: 0;">Infrastructure Dashboard</h1>
+            <p class="muted" style="margin: 4px 0 0 0;">Real-time monitoring & health status</p>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+            <div id="grid-controls" style="display: flex; gap: 4px; background: var(--card-bg); padding: 4px; border-radius: 8px; border: 1px solid var(--border);">
+                <button class="btn btn-sm" onclick="setGridColumns(2)" title="2 Columns" style="padding: 4px 8px; background: transparent; color: var(--text-muted);">2</button>
+                <button class="btn btn-sm active" onclick="setGridColumns(3)" title="3 Columns" style="padding: 4px 8px; background: var(--accent); color: white;">3</button>
+                <button class="btn btn-sm" onclick="setGridColumns(4)" title="4 Columns" style="padding: 4px 8px; background: transparent; color: var(--text-muted);">4</button>
+                <button class="btn btn-sm" onclick="setGridColumns(6)" title="6 Columns" style="padding: 4px 8px; background: transparent; color: var(--text-muted);">6</button>
+            </div>
+            <div id="global-stats" style="display: flex; gap: 24px; background: var(--card-bg); padding: 12px 24px; border-radius: 12px; border: 1px solid var(--border);">
+                <div class="stat-item">
+                    <span class="metric-label">Total</span>
+                    <div class="metric-value">{{ servers|length }}</div>
+                </div>
+                <div class="stat-item">
+                    <span class="metric-label" style="color: var(--success);">UP</span>
+                    <div class="metric-value" id="global-up">0</div>
+                </div>
+                <div class="stat-item">
+                    <span class="metric-label" style="color: var(--danger);">DOWN</span>
+                    <div class="metric-value" id="global-down">0</div>
+                </div>
+            </div>
+            <a href="{% url 'monitoring_mode' %}" class="btn" style="background: var(--bg-tertiary); border: 1px solid var(--border);">
+                Alert History
+            </a>
+        </div>
+    </header>
+
+    <div class="category-tabs">
+        <div class="category-tab active">All Servers</div>
+        {% for category in servers_by_type.keys %}
+            <div class="category-tab">{{ category }}</div>
+        {% endfor %}
+    </div>
+
+    <div class="server-grid">
+        {% for category, servers in servers_by_type.items %}
+            {% for s in servers %}
+                <div class="server-card" data-category="{{ category }}" data-server-id="{{ s.id }}" onclick="openPanel('{{ s.id }}', '{{ s.name }}')">
+                    <div class="card-header">
+                        <h3 class="server-name">{{ s.name }}</h3>
+                                                    <div style="display: flex; align-items: center;">
+                                                        {% if ssl_certificates|get_item:s.id %}
+                                                            {% with first_cert=ssl_certificates|get_item:s.id|first_item %}
+                                                                <span class="ssl-badge {{ first_cert.status }}" 
+                                                                    title="SSL: {{ first_cert.common_name }} ({{ first_cert.days_remaining }} days)">
+                                                                    SSL
+                                                                </span>
+                                                            {% endwith %}
+                                                        {% endif %}
+                                                        <div class="status-badge {% if s.last_status == 'UP' %}up{% elif s.last_status == 'DOWN' %}down{% else %}unknown{% endif %}" 
+                                                             title="{{ s.get_last_status_display }}"></div>
+                                                    </div>                    </div>
+                    
+                    <p class="muted" style="font-size: 0.8rem; margin: 0;">{{ s.ip_address }}</p>
+
+                    <div class="card-metrics">
+                        <!-- CPU -->
+                        <div class="card-metric">
+                            <span class="metric-label">CPU</span>
+                            <span class="metric-value">
+                                {% if s.ssh_metrics.cpu %}{{ s.ssh_metrics.cpu.usage_percent|floatformat:0 }}%
+                                {% elif s.last_cpu_percent is not None %}{{ s.last_cpu_percent|floatformat:0 }}%
+                                {% else %}-{% endif %}
+                            </span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar {% with val=s.ssh_metrics.cpu.usage_percent|default:s.last_cpu_percent %}{% if val >= 90 %}danger{% elif val >= 70 %}warning{% endif %}{% endwith %}" 
+                                     style="width: {% if s.ssh_metrics.cpu %}{{ s.ssh_metrics.cpu.usage_percent }}{% elif s.last_cpu_percent %}{{ s.last_cpu_percent }}{% else %}0{% endif %}%;"></div>
+                            </div>
+                        </div>
+                        <!-- RAM -->
+                        <div class="card-metric">
+                            <span class="metric-label">RAM</span>
+                            <span class="metric-value">
+                                {% if s.ssh_metrics.ram %}{{ s.ssh_metrics.ram.usage_percent|floatformat:0 }}%
+                                {% elif s.last_ram_percent is not None %}{{ s.last_ram_percent|floatformat:0 }}%
+                                {% else %}-{% endif %}
+                            </span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar {% with val=s.ssh_metrics.ram.usage_percent|default:s.last_ram_percent %}{% if val >= 90 %}danger{% elif val >= 70 %}warning{% endif %}{% endwith %}" 
+                                     style="width: {% if s.ssh_metrics.ram %}{{ s.ssh_metrics.ram.usage_percent }}{% elif s.last_ram_percent %}{{ s.last_ram_percent }}{% else %}0{% endif %}%;"></div>
+                            </div>
+                        </div>
+                        <!-- Disk -->
+                        <div class="card-metric">
+                            <span class="metric-label">Disk</span>
+                            <span class="metric-value">
+                                {% if s.ssh_metrics.disk and 'usage_percent' in s.ssh_metrics.disk %}{{ s.ssh_metrics.disk.usage_percent|floatformat:0 }}%
+                                {% elif s.last_disk_percent is not None %}{{ s.last_disk_percent|floatformat:0 }}%
+                                {% else %}-{% endif %}
+                            </span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar {% with val=s.ssh_metrics.disk.usage_percent|default:s.last_disk_percent %}{% if val >= 90 %}danger{% elif val >= 70 %}warning{% endif %}{% endwith %}" 
+                                     style="width: {% if s.ssh_metrics.disk and 'usage_percent' in s.ssh_metrics.disk %}{{ s.ssh_metrics.disk.usage_percent }}{% elif s.last_disk_percent %}{{ s.last_disk_percent }}{% else %}0{% endif %}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <span>{{ category }}</span>
+                        <span>{% if s.last_checked %}{{ s.last_checked|timesince }} ago{% else %}Never{% endif %}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<div id="panel-backdrop" onclick="closePanel()"></div>
+
+<!-- Side Panel -->
+<div id="side-panel">
+    <div class="panel-header">
+        <h2 id="panel-server-name" style="margin: 0;">Server Name</h2>
+        <button class="panel-close" onclick="closePanel()">&times;</button>
+    </div>
+
+    <div id="metrics-charts" class="panel-section">
+        <div class="panel-section-title">Performance Trends</div>
+        <!-- ApexCharts will be injected here -->
+        <div id="cpu-chart"></div>
+        <div id="ram-chart"></div>
+        <div id="disk-chart"></div>
+        <div id="network-chart"></div>
+        <div id="latency-chart"></div>
+    </div>
+
+    <div id="service-status" class="panel-section">
+        <div class="panel-section-title">Service Status</div>
+        <div id="services-list"></div>
+    </div>
+
+    <div id="ssl-info" class="panel-section">
+        <div class="panel-section-title">SSL Certificates</div>
+        <div id="ssl-details"></div>
+    </div>
+
+    <div id="directory-watch" class="panel-section">
+        <div class="panel-section-title">Directory Watch</div>
+        <div id="dir-details"></div>
+        <div style="margin-top: 16px;">
+            <input type="text" id="dir-paths-input" placeholder="/path1,/path2" style="width: 100%; margin-bottom: 8px;">
+            <button class="btn" style="width: 100%;" onclick="updateDirectories()">Update Directories</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/vendor/apexcharts.min.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('.category-tab');
+        const cards = document.querySelectorAll('.server-card');
+
+        // WebSocket initialization
+        const statusSocket = new WebSocket(
+            (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + 
+            window.location.host + '/ws/status/'
+        );
+
+        statusSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'metrics_update') {
+                updateServerMetrics(data.server);
+            } else if (data.type === 'update') {
+                updateServerStatus(data.server);
+            }
+        };
+
+        function updateServerStatus(server) {
+            const card = document.querySelector(`.server-card[data-server-id="${server.id}"]`);
+            if (!card) return;
+
+            const statusBadge = card.querySelector('.status-badge');
+            statusBadge.className = `status-badge ${server.last_status.toLowerCase()}`;
+            statusBadge.title = server.last_status_display;
+
+            // Update SSL Badge
+            const sslBadge = document.getElementById(`ssl-badge-${server.id}`);
+            if (sslBadge) {
+                if (server.ssl_summary) {
+                    sslBadge.className = `ssl-badge ${server.ssl_summary.status}`;
+                    sslBadge.style.display = 'inline-block'; // Show badge
+                    sslBadge.title = `SSL: ${server.ssl_summary.common_name} (${server.ssl_summary.days_remaining} days)`;
+                } else {
+                    sslBadge.style.display = 'none'; // Hide if no data
+                }
+            }
+
+            
+            // Also update metrics if they are included in the status update
+            updateServerMetrics(server);
+        }
+
+        function updateServerMetrics(server) {
+            const card = document.querySelector(`.server-card[data-server-id="${server.id}"]`);
+            if (!card) return;
+
+            // Update CPU
+            if (server.last_cpu_percent !== null && server.last_cpu_percent !== undefined) {
+                const cpuVal = card.querySelector('.card-metric:nth-child(1) .metric-value');
+                const cpuBar = card.querySelector('.card-metric:nth-child(1) .progress-bar');
+                if (cpuVal) cpuVal.textContent = Math.round(server.last_cpu_percent) + '%';
+                if (cpuBar) {
+                    cpuBar.style.width = server.last_cpu_percent + '%';
+                    cpuBar.className = 'progress-bar' + (server.last_cpu_percent >= 90 ? ' danger' : server.last_cpu_percent >= 70 ? ' warning' : '');
+                }
+            }
+
+            // Update RAM
+            if (server.last_ram_percent !== null && server.last_ram_percent !== undefined) {
+                const ramVal = card.querySelector('.card-metric:nth-child(2) .metric-value');
+                const ramBar = card.querySelector('.card-metric:nth-child(2) .progress-bar');
+                if (ramVal) ramVal.textContent = Math.round(server.last_ram_percent) + '%';
+                if (ramBar) {
+                    ramBar.style.width = server.last_ram_percent + '%';
+                    ramBar.className = 'progress-bar' + (server.last_ram_percent >= 90 ? ' danger' : server.last_ram_percent >= 70 ? ' warning' : '');
+                }
+            }
+
+            // Update Disk
+            if (server.last_disk_percent !== null && server.last_disk_percent !== undefined) {
+                const diskVal = card.querySelector('.card-metric:nth-child(3) .metric-value');
+                const diskBar = card.querySelector('.card-metric:nth-child(3) .progress-bar');
+                if (diskVal) diskVal.textContent = Math.round(server.last_disk_percent) + '%';
+                if (diskBar) {
+                    diskBar.style.width = server.last_disk_percent + '%';
+                    diskBar.className = 'progress-bar' + (server.last_disk_percent >= 90 ? ' danger' : server.last_disk_percent >= 70 ? ' warning' : '');
+                }
+            }
+
+            // Update footer time
+            const footerTime = card.querySelector('.card-footer span:nth-child(2)');
+            if (footerTime) footerTime.textContent = 'Just now';
+
+            // Update panel if open
+            if (currentServerId == server.id) {
+                // Throttle panel refreshes
+                if (!window.lastPanelRefresh || Date.now() - window.lastPanelRefresh > 5000) {
+                    refreshPanelData();
+                    window.lastPanelRefresh = Date.now();
+                }
+            }
+        }
+
+        // Calculate global stats
+        let up = 0, down = 0;
+        cards.forEach(card => {
+            const badge = card.querySelector('.status-badge');
+            if (badge.classList.contains('up')) up++;
+            else if (badge.classList.contains('down')) down++;
+        });
+        document.getElementById('global-up').textContent = up;
+        document.getElementById('global-down').textContent = down;
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                const category = tab.textContent.trim();
+
+                // Filter cards
+                cards.forEach(card => {
+                    if (category === 'All Servers' || card.dataset.category === category) {
+                        card.classList.remove('hidden');
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+            });
+        });
+    });
+
+    let currentCharts = {
+        cpu: null,
+        ram: null,
+        disk: null,
+        network: null,
+        latency: null
+    };
+    let currentServerId = null;
+
+    function formatDateString(dateString) {
+        if (!dateString) {
+            return 'N/A';
+        }
+        const date = new Date(dateString);
+        if (date.toString() === "Invalid Date") {
+            return 'Invalid Date';
+        }
+        return date.toLocaleString();
+    }
+
+    function initChart(elementId, label, color, options_override = {}) {
+        const default_options = {
+            chart: {
+                type: 'area',
+                height: 160,
+                width: '100%',
+                sparkline: { enabled: false },
+                animations: { enabled: true, easing: 'easeinout', speed: 800 },
+                background: 'transparent',
+                toolbar: { show: false }
+            },
+            stroke: { curve: 'smooth', width: 2 },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.45,
+                    opacityTo: 0.05,
+                    stops: [20, 100]
+                }
+            },
+            series: Array.isArray(label) ? label.map((l, i) => ({ name: l, data: [] })) : [{ name: label, data: [] }],
+            xaxis: {
+                type: 'datetime',
+                labels: { 
+                    show: true,
+                    style: { colors: '#71717a', fontSize: '10px' },
+                    datetimeUTC: false
+                },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: { 
+                min: 0, 
+                tickAmount: 4,
+                labels: {
+                    show: true,
+                    style: { colors: '#71717a', fontSize: '10px' },
+                    formatter: (val) => val >= 1000000 ? (val/1000000).toFixed(1) + 'M' : val >= 1000 ? (val/1000).toFixed(1) + 'K' : val.toFixed(0)
+                }
+            },
+            colors: Array.isArray(color) ? color : [color],
+            grid: {
+                borderColor: '#27272a',
+                strokeDashArray: 4,
+                xaxis: { lines: { show: true } },
+                yaxis: { lines: { show: true } },
+                padding: { left: 10, right: 10 }
+            },
+            tooltip: {
+                theme: 'dark',
+                x: { show: true, format: 'HH:mm' },
+                y: { formatter: (val) => val.toLocaleString() }
+            }
+        };
+        
+        const options = { ...default_options, ...options_override };
+        if (options_override.yaxis) options.yaxis = { ...default_options.yaxis, ...options_override.yaxis };
+
+        const element = document.querySelector("#" + elementId);
+        if (!element) return null;
+        const chart = new ApexCharts(element, options);
+        chart.render();
+        return chart;
+    }
+
+    async function openPanel(serverId, serverName) {
+        currentServerId = serverId;
+        document.getElementById('panel-server-name').textContent = serverName;
+        document.getElementById('side-panel').classList.add('open');
+        document.getElementById('panel-backdrop').classList.add('show');
+        
+        // Ensure containers have height before rendering
+        const containers = ['cpu-chart', 'ram-chart', 'disk-chart', 'network-chart', 'latency-chart'];
+        containers.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.minHeight = '160px';
+        });
+
+        // Wait a bit for transition
+        setTimeout(async () => {
+            if (!currentCharts.cpu) currentCharts.cpu = initChart('cpu-chart', 'CPU', '#3b82f6', { yaxis: { max: 100, labels: { formatter: (val) => val.toFixed(0) + '%' } } });
+            if (!currentCharts.ram) currentCharts.ram = initChart('ram-chart', 'RAM', '#f59e0b', { yaxis: { max: 100, labels: { formatter: (val) => val.toFixed(0) + '%' } } });
+            if (!currentCharts.disk) currentCharts.disk = initChart('disk-chart', 'Disk', '#ef4444', { yaxis: { max: 100, labels: { formatter: (val) => val.toFixed(0) + '%' } } });
+            if (!currentCharts.network) currentCharts.network = initChart('network-chart', ['In', 'Out'], ['#10b981', '#8b5cf6'], { yaxis: { labels: { formatter: (val) => val >= 1024*1024 ? (val/(1024*1024)).toFixed(1) + 'MB' : val >= 1024 ? (val/1024).toFixed(1) + 'KB' : val.toFixed(0) + 'B' } } });
+            if (!currentCharts.latency) currentCharts.latency = initChart('latency-chart', 'Latency', '#ec4899', { yaxis: { labels: { formatter: (val) => val.toFixed(0) + 'ms' } } });
+
+            await refreshPanelData();
+        }, 400);
+    }
+
+    function setGridColumns(cols) {
+        document.documentElement.style.setProperty('--grid-columns', cols);
+        
+        // Update active button
+        const buttons = document.querySelectorAll('#grid-controls .btn-sm');
+        buttons.forEach(btn => {
+            if (parseInt(btn.textContent) === cols) {
+                btn.classList.add('active');
+                btn.style.background = 'var(--accent)';
+                btn.style.color = 'white';
+            } else {
+                btn.classList.remove('active');
+                btn.style.background = 'transparent';
+                btn.style.color = 'var(--text-muted)';
+            }
+        });
+    }
+
+
+    async function refreshPanelData() {
+        if (!currentServerId) return;
+        
+        try {
+            const response = await fetch(`/api/v2/metrics/server/${currentServerId}/detailed/`);
+            const data = await response.json();
+            
+            if (data.success) {
+                // Prepare data for ApexCharts
+                const prepareData = (points) => {
+                    if (!points) return [];
+                    return points.map(p => ({
+                        x: new Date(p.x).getTime(),
+                        y: typeof p.y === 'number' ? parseFloat(p.y).toFixed(2) : p.y
+                    })).filter(p => !isNaN(p.x) && p.y !== null);
+                };
+
+                // Update Charts
+                if (currentCharts.cpu) currentCharts.cpu.updateSeries([{ data: prepareData(data.historical.cpu) }]);
+                if (currentCharts.ram) currentCharts.ram.updateSeries([{ data: prepareData(data.historical.ram) }]);
+                if (currentCharts.disk) currentCharts.disk.updateSeries([{ data: prepareData(data.historical.disk) }]);
+                
+                if (currentCharts.network) {
+                    currentCharts.network.updateSeries([
+                        { name: 'In', data: prepareData(data.historical.network_in) },
+                        { name: 'Out', data: prepareData(data.historical.network_out) }
+                    ]);
+                }
+                
+                if (currentCharts.latency) {
+                    currentCharts.latency.updateSeries([{ data: prepareData(data.historical.latency) }]);
+                }
+
+                // Render Services
+                const servicesList = document.getElementById('services-list');
+                servicesList.innerHTML = data.services.map(s => `
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                        <span>${s.name}</span>
+                        <span class="status ${s.status === 'up' ? 'up' : 'down'}">${s.status.toUpperCase()}</span>
+                    </div>
+                `).join('');
+
+                // Render SSL Details in Side Panel
+                const sslDetails = document.getElementById('ssl-details');
+                if (data.ssl && data.ssl.length > 0) {
+                    sslDetails.innerHTML = data.ssl.map(cert => `
+                        <div style="margin-bottom: 12px; background: var(--bg-tertiary); padding: 12px; border-radius: 8px; position: relative;">
+                            <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">
+                                ${cert.subject_common_name || cert.common_name || 'N/A'}
+                                ${cert.port && cert.port !== 443 ? `:${cert.port}` : ''}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Issuer: ${cert.issuer_common_name || cert.issuer || 'N/A'}</div>
+                            ${cert.path ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Path: ${cert.path}</div>` : ''}
+                            ${cert.hostname ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Hostname: ${cert.hostname}</div>` : ''}
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                                <span>Expires: ${formatDateString(cert.expiry_date)}</span>
+                                <span class="status ${cert.status === 'expired' || cert.status === 'critical' ? 'down' : cert.status === 'warning' ? 'warning' : 'up'}">
+                                    ${cert.days_remaining !== null ? `${cert.days_remaining} days left` : 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    sslDetails.innerHTML = '<p class="muted">No SSL certificates discovered.</p>';
+                }
+
+                // Render Directory Watch
+                const dirDetails = document.getElementById('dir-details');
+                const configuredDirs = (data.monitored_directories || '')
+                                        .split(',')
+                                        .map(p => p.trim())
+                                        .filter(p => p);
+                
+                let combinedDirs = [];
+                const metricPaths = new Set();
+
+                if (Array.isArray(data.directory_watch)) { // Add this check
+                    // Add reported metrics first
+                    data.directory_watch.forEach(metric => {
+                        combinedDirs.push(metric);
+                        metricPaths.add(metric.path);
+                    });
+                } else {
+                    console.warn("data.directory_watch is not an array or is missing:", data.directory_watch);
+                }
+
+                // Add configured paths that don't have reported metrics yet
+                configuredDirs.forEach(path => {
+                    if (!metricPaths.has(path)) {
+                        combinedDirs.push({
+                            path: path,
+                            newest_folder_name: null,
+                            newest_folder_size_mb: null,
+                            newest_folder_last_modified: null,
+                            status: 'pending',
+                            error: 'Awaiting first report'
+                        });
+                    }
+                });
+
+                const dirList = combinedDirs.map((d, index) => `
+                    <div style="margin-bottom: 12px; background: var(--bg-tertiary); padding: 12px; border-radius: 8px; position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div style="font-size: 0.8rem; font-weight: 600; overflow-wrap: break-word; max-width: 80%;">${d.path}</div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-sm" onclick="editDirectory('${d.path}')" style="background: transparent; color: var(--accent); padding: 2px 4px;">Edit</button>
+                                <button class="btn btn-sm" onclick="deleteDirectory('${d.path}')" style="background: transparent; color: var(--danger); padding: 2px 4px;">Delete</button>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; margin-top: 4px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span class="status ${d.status === 'ok' ? 'up' : 'down'}">
+                                    ${d.status === 'ok' ? `Backup updated: ${formatDateString(d.newest_folder_last_modified)}` : d.status.toUpperCase()}
+                                </span>
+                            </div>
+                            ${d.newest_folder_name ? `
+                            <div style="display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.7rem; font-style: italic;">
+                                <span>Newest: ${d.newest_folder_name}</span>
+                            </div>` : ''}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                            <span title="Newest Folder Size">💾 ${d.newest_folder_size_mb !== null && d.newest_folder_size_mb !== undefined ? d.newest_folder_size_mb.toLocaleString() + ' MB' : '-'}</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+                dirDetails.innerHTML = dirList || '<p class="muted">No directories monitored</p>';
+
+                // Update input field for adding new
+                document.getElementById('dir-paths-input').value = '';
+            }
+        } catch (error) {
+            console.error('Error fetching server details:', error);
+        }
+    }
+
+    async function editDirectory(oldPath) {
+        console.log('editDirectory called for:', oldPath);
+        const newPath = prompt("Enter new directory path:", oldPath);
+        if (newPath === null || newPath === oldPath) {
+            console.log('Edit cancelled or no change.');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/v2/metrics/server/${currentServerId}/detailed/`);
+            const data = await response.json();
+            const currentDirs = data.monitored_directories || '';
+            let paths = currentDirs.split(',').map(p => p.trim()).filter(p => p);
+            console.log('Current paths from API:', paths);
+            const index = paths.indexOf(oldPath);
+            if (index > -1) {
+                paths[index] = newPath;
+                console.log('Paths after edit:', paths);
+                await saveDirectories(paths.join(','));
+            } else {
+                console.warn('Old path not found for editing:', oldPath);
+            }
+        } catch (e) { 
+            console.error('Error in editDirectory:', e); 
+        }
+    }
+
+    async function deleteDirectory(pathToDelete) {
+        console.log('deleteDirectory called for:', pathToDelete);
+        if (!confirm(`Stop monitoring ${pathToDelete}?`)) {
+            console.log('Delete cancelled.');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/v2/metrics/server/${currentServerId}/detailed/`);
+            const data = await response.json();
+            const currentDirs = data.monitored_directories || '';
+            let paths = currentDirs.split(',').map(p => p.trim()).filter(p => p);
+            console.log('Current paths from API:', paths);
+            const filteredPaths = paths.filter(p => p !== pathToDelete);
+            console.log('Paths after delete:', filteredPaths);
+            if (filteredPaths.length !== paths.length) { // Check if something was actually removed
+                await saveDirectories(filteredPaths.join(','));
+            } else {
+                console.warn('Path not found for deletion:', pathToDelete);
+            }
+        } catch (e) { 
+            console.error('Error in deleteDirectory:', e); 
+        }
+    }
+
+    async function updateDirectories() {
+        console.log('updateDirectories called.');
+        if (!currentServerId) {
+            console.warn('No server selected for updateDirectories.');
+            return;
+        }
+        const newPath = document.getElementById('dir-paths-input').value.trim();
+        if (!newPath) {
+            console.warn('No new path entered.');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/v2/metrics/server/${currentServerId}/detailed/`);
+            const data = await response.json();
+            const currentDirs = data.monitored_directories || '';
+            let paths = currentDirs.split(',').map(p => p.trim()).filter(p => p);
+            console.log('Current paths from API:', paths);
+            if (paths.includes(newPath)) {
+                alert("Directory already monitored");
+                console.log('Attempted to add existing directory:', newPath);
+                return;
+            }
+            paths.push(newPath);
+            console.log('Paths after add:', paths);
+            await saveDirectories(paths.join(','));
+        } catch (e) { 
+            console.error('Error in updateDirectories:', e); 
+        }
+    }
+
+    async function saveDirectories(pathsString) {
+        try {
+            const response = await fetch(`/api/servers/${currentServerId}/directories/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ directories: pathsString })
+            });
+            const data = await response.json();
+            if (data.success) {
+                await refreshPanelData();
+            } else {
+                alert('Failed to update directories: ' + data.error);
+            }
+        } catch (error) {
+            console.error('Error saving directories:', error);
+        }
+    }
+
+    function closePanel() {
+        document.getElementById('side-panel').classList.remove('open');
+        document.getElementById('panel-backdrop').classList.remove('show');
+        currentServerId = null;
+    }
+</script>
+{% endblock %}

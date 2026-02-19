@@ -1,0 +1,876 @@
+{% extends "monitor/base.html" %}
+{% load static %}
+{% load monitor_tags %}
+{% load failover_filters %}
+
+{% block title %}Network Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary: #3b82f6;
+    --primary-dark: #2563eb;
+    --secondary: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #06b6d4;
+    --dark: #1e293b;
+    --darker: #0f172a;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --card-bg: #1e293b;
+    --header-bg: #0f172a;
+}
+
+.network-dashboard {
+    padding: 2rem;
+    background: var(--darker);
+    min-height: 100vh;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--header-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.dashboard-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.discovery-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.discovery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.discovery-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.scan-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.scan-input {
+    background: var(--darker);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.scan-button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.scan-button:hover {
+    background: var(--primary-dark);
+}
+
+.scan-button:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+}
+
+.scanning-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--info);
+    font-size: 0.875rem;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top: 2px solid var(--info);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.devices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.device-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.device-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    border-color: var(--primary);
+}
+
+.device-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.device-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+}
+
+.device-type {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.device-type-pc { background: #3b82f6; }
+.device-type-mobile { background: #10b981; }
+.device-type-printer { background: #f59e0b; }
+.device-type-switch { background: #8b5cf6; }
+.device-type-router { background: #ef4444; }
+.device-type-firewall { background: #dc2626; }
+.device-type-access-point { background: #06b6d4; }
+.device-type-unknown { background: #6b7280; }
+
+.device-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.status-online {
+    background: var(--secondary);
+}
+
+.status-offline {
+    background: var(--danger);
+}
+
+.status-unknown {
+    background: var(--warning);
+}
+
+.device-info {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.info-label {
+    color: var(--text-muted);
+}
+
+.info-value {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.discovery-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--info);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1rem;
+    background: var(--darker);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: var(--primary);
+}
+
+.stat-card.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: white;
+}
+
+.stat-card.active .stat-label {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--text);
+}
+
+.stat-label {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.isp-section {
+    margin-top: 2rem;
+}
+
+.isp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.failover-events {
+    margin-top: 2rem;
+}
+
+.failover-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.failover-time {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.failover-reason {
+    color: var(--text);
+    font-weight: 500;
+    margin: 0.25rem 0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.speed-test-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.speed-test-btn {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.speed-test-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-loading {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.btn-secondary {
+    background: var(--border);
+    color: var(--text);
+}
+
+.btn-secondary:hover {
+    background: #475569;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+}
+
+.metrics-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.metrics-section h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+    font-size: 0.75rem;
+}
+
+.metric-name {
+    color: var(--text-muted);
+}
+
+.metric-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.last-updated {
+    margin-top: 0.5rem;
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.device-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="network-dashboard">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Network Dashboard</h1>
+        <div class="header-actions">
+            <a href="{% url "dashboard" %}" class="btn btn-secondary">Back to Server Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Network Discovery Section -->
+    <div class="discovery-section">
+        <div class="discovery-header">
+            <h2 style="color: var(--text); margin: 0;">Network Device Discovery</h2>
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="{% url "network_devices" %}" class="btn btn-primary">View All Devices</a>
+                <button id="refresh-stats" class="btn btn-secondary">Refresh Stats</button>
+            </div>
+        </div>
+        
+        <!-- Discovery Statistics -->
+        <div id="discovery-stats" style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- ISP Connections Section -->
+    <div class="isp-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="color: var(--text); margin: 0;">ISP Connections</h2>
+            <a href="{% url "isp_add" %}" class="btn btn-primary">Add ISP Connection</a>
+        </div>
+        
+        {% if isp_connections %}
+            <div class="isp-grid">
+                {% for isp in isp_connections %}
+                    <div class="device-card">
+                        <div class="device-header">
+                            <h3 class="device-name">{{ isp.name }}</h3>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span class="device-type">{{ isp.get_isp_type_display }}</span>
+                                {% if isp.primary_connection %}
+                                    <span class="badge" style="background: var(--warning); color: white;">PRIMARY</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="device-status">
+                            {% if isp.id in isp_stats %}
+                                {% with isp_data=isp_stats|lookup:isp.id %}
+                                    <div class="status-indicator status-{{ isp_data.status }}"></div>
+                                {% endwith %}
+                            {% else %}
+                                <div class="status-indicator status-unknown"></div>
+                            {% endif %}
+                            <span>{{ isp.gateway_ip }} • {{ isp.bandwidth_mbps }} Mbps</span>
+                        </div>
+
+                        <!-- ISP Metrics -->
+                        {% if isp.id in isp_stats %}
+                            {% with stats=isp_stats|lookup:isp.id %}
+                            <div class="metrics-section">
+                                <h4>Connection Metrics</h4>
+                                {% for metric_name, metric_data in stats.metrics.items %}
+                                    <div class="metric">
+                                        <span class="metric-name">{{ metric_name|title }}:</span>
+                                        <span class="metric-value">
+                                            {% if metric_data.value == 1.0 or metric_data.value == 0.0 %}
+                                                {% if metric_data.value == 1.0 %}Up{% else %}Down{% endif %}
+                                            {% else %}
+                                                {{ metric_data.value|floatformat:2 }} {{ metric_data.unit }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                {% empty %}
+                                    <div class="metric">
+                                        <span class="metric-name">No metrics available</span>
+                                    </div>
+                                {% endfor %}
+                                <div class="last-updated">
+                                    Last checked: {% if stats.last_checked %}{{ stats.last_checked|date:"H:i:s" }}{% else %}Never{% endif %}
+                                </div>
+                                <div class="speed-test-section">
+                                    <button class="btn btn-primary speed-test-btn" data-isp-id="{{ isp.id }}" data-isp-name="{{ isp.name }}">
+                                        <span class="btn-text">Run Speed Test</span>
+                                        <span class="btn-loading" style="display: none;">Testing...</span>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% else %}
+                            <div class="metrics-section">
+                                <h4>Connection Metrics</h4>
+                                <div class="metric">
+                                    <span class="metric-name">No metrics available</span>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                            <a href="{% url "isp_detail" isp.id %}" class="btn btn-primary">View Details</a>
+                            <a href="{% url "isp_edit" isp.id %}" class="btn btn-secondary">Edit</a>
+                            <a href="{% url "isp_delete" isp.id %}" class="btn btn-danger">Delete</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No ISP Connections Configured</h3>
+                <p>Add your Converge and PLDT connections to monitor internet connectivity.</p>
+                <a href="{% url "isp_add" %}" class="btn btn-primary" style="margin-top: 1rem;">Add ISP Connection</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Failover Events -->
+    {% if recent_failovers %}
+        <div class="failover-events">
+            <h3 style="color: var(--text); margin-bottom: 1rem;">Recent ISP Failover Events</h3>
+            {% for failover in recent_failovers %}
+                <div class="failover-item">
+                    <div class="failover-time">{{ failover.failover_time|date:"Y-m-d H:i:s" }}</div>
+                    <div class="failover-reason">{{ failover.reason|human_failover_reason }}</div>
+                    <div style="color: var(--text-muted); font-size: 0.875rem;">
+                        <div class="failover-path">
+                            <strong>Connection:</strong> {{ failover.primary_isp.name }}
+                            {% if failover.backup_isp %} 
+                                <span style="color: var(--warning);">→ Switched to {{ failover.backup_isp.name }}</span>
+                            {% endif %}
+                        </div>
+                        {% if failover.duration_minutes %}
+                            <div class="failover-duration-text">
+                                <strong>Downtime:</strong> {{ failover.duration_minutes|format_duration }}
+                            </div>
+                        {% endif %}
+                        {% if failover.recovery_time %}
+                            <div class="failover-recovery">
+                                <strong>Recovered:</strong> {{ failover.recovery_time|date:"Y-m-d H:i:s" }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Report Generation Modal -->
+<div id="reportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%;">
+        <h3 style="color: var(--text); margin: 0 0 1rem 0;">Generate Bandwidth Report</h3>
+        <p style="color: var(--text-muted); margin: 0 0 1.5rem 0;">Select report type and time period for <span id="deviceName"></span></p>
+        
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text); margin-bottom: 0.5rem;">Report Type</label>
+            <select id="reportType" class="scan-input" style="width: 100%;">
+                <option value="consumers">Top Consumers</option>
+                <option value="summary">Summary Statistics</option>
+                <option value="trends">Hourly Trends</option>
+            </select>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text); margin-bottom: 0.5rem;">Time Period (hours)</label>
+            <select id="reportHours" class="scan-input" style="width: 100%;">
+                <option value="1">Last 1 hour</option>
+                <option value="6">Last 6 hours</option>
+                <option value="24" selected>Last 24 hours</option>
+                <option value="168">Last 7 days</option>
+                <option value="720">Last 30 days</option>
+            </select>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; color: var(--text); margin-bottom: 0.5rem;">Export Format</label>
+            <div style="display: flex; gap: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
+                    <input type="radio" name="format" value="csv" checked>
+                    CSV
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text);">
+                    <input type="radio" name="format" value="html">
+                    HTML
+                </label>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button onclick="closeReportModal()" class="btn btn-secondary">Cancel</button>
+            <button onclick="generateReport()" class="btn btn-primary">Generate Report</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Network Device Discovery JavaScript
+let isScanning = false;
+let currentDeviceId = null;
+
+function showReportModal(deviceId, deviceName) {
+    currentDeviceId = deviceId;
+    document.getElementById('deviceName').textContent = deviceName;
+    document.getElementById('reportModal').style.display = 'flex';
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+    currentDeviceId = null;
+}
+
+async function generateReport() {
+    if (!currentDeviceId) return;
+    
+    const reportType = document.getElementById('reportType').value;
+    const reportHours = document.getElementById('reportHours').value;
+    const format = document.querySelector('input[name="format"]:checked').value;
+    
+    const endpoint = format === 'csv' ? '/report/csv/' : '/report/pdf/';
+    const url = `/api/bandwidth/device/${currentDeviceId}${endpoint}?view=${reportType}&hours=${reportHours}`;
+    
+    try {
+        const response = await fetch(url);
+        
+        if (response.ok) {
+            // Create download link
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            
+            // Get filename from Content-Disposition header
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `bandwidth_report_${reportType}_${reportHours}h.${format}`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+            
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+            
+            showNotification(`Report generated and downloaded successfully`, 'success');
+            closeReportModal();
+        } else {
+            const errorText = await response.text();
+            showNotification(`Failed to generate report: ${errorText}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error generating report:', error);
+        showNotification('Error generating report: ' + error.message, 'error');
+    }
+}
+
+async function loadDiscoveryStats() {
+    try {
+        const response = await fetch('/api/network/scan/status/');
+        const stats = await response.json();
+        
+        const statsContainer = document.getElementById('discovery-stats');
+        
+        // Create main stats cards
+        let statsHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${stats.total_devices}</div>
+                <div class="stat-label">Total Devices</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${stats.active_devices}</div>
+                <div class="stat-label">Active</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${stats.auto_discovered}</div>
+                <div class="stat-label">Auto-discovered</div>
+            </div>
+        `;
+        
+        // Add device type breakdown cards
+        if (stats.device_types && Object.keys(stats.device_types).length > 0) {
+            Object.entries(stats.device_types).forEach(([type, info]) => {
+                statsHTML += `
+                    <div class="stat-card">
+                        <div class="stat-value">${info.count}</div>
+                        <div class="stat-label">${info.display_name}</div>
+                    </div>
+                `;
+            });
+        }
+        
+        statsContainer.innerHTML = statsHTML;
+        
+    } catch (error) {
+        console.error('Error loading discovery stats:', error);
+    }
+}
+
+function showNotification(message, type) {
+    // Simple notification implementation
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? 'var(--secondary)' : 'var(--danger)'};
+        color: white;
+        border-radius: 8px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    loadDiscoveryStats();
+    
+    // Refresh stats button
+    document.getElementById('refresh-stats').addEventListener('click', loadDiscoveryStats);
+    
+    // Auto-refresh ISP metrics every 30 minutes (1,800,000 milliseconds)
+    setInterval(loadDiscoveryStats, 1800000);
+    
+    // ISP Speed Test functionality
+    document.querySelectorAll('.speed-test-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const ispId = this.dataset.ispId;
+            const ispName = this.dataset.ispName;
+            const btnText = this.querySelector('.btn-text');
+            const btnLoading = this.querySelector('.btn-loading');
+            
+            // Disable button and show loading state
+            this.disabled = true;
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'inline';
+            
+            // Run speed test
+            fetch('/api/isp/speed-test/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    isp_id: ispId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Speed test completed for ${ispName}: ${data.bandwidth_mbps.toFixed(2)} Mbps`, 'success');
+                    
+                    // Update the "Last checked" timestamp for this ISP
+                    const ispCard = button.closest('.isp-card');
+                    if (ispCard) {
+                        const lastUpdatedElement = ispCard.querySelector('.last-updated');
+                        if (lastUpdatedElement) {
+                            const now = new Date();
+                            const timeString = now.toLocaleTimeString('en-US', { 
+                                hour12: false, 
+                                hour: '2-digit', 
+                                minute: '2-digit', 
+                                second: '2-digit' 
+                            });
+                            lastUpdatedElement.innerHTML = `Last checked: ${timeString}`;
+                        }
+                        
+                        // Update the bandwidth metric if it exists
+                        const bandwidthMetric = ispCard.querySelector('.metric-name');
+                        if (bandwidthMetric && bandwidthMetric.textContent.includes('bandwidth_mbps')) {
+                            const metricValue = bandwidthMetric.nextElementSibling;
+                            if (metricValue) {
+                                metricValue.innerHTML = `${data.bandwidth_mbps.toFixed(2)} Mbps`;
+                            }
+                        }
+                    }
+                    
+                    // Refresh the overall stats to show updated bandwidth
+                    setTimeout(loadDiscoveryStats, 1000);
+                } else {
+                    showNotification(`Speed test failed for ${ispName}: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Speed test error:', error);
+                showNotification(`Speed test failed for ${ispName}: Network error`, 'error');
+            })
+            .finally(() => {
+                // Re-enable button and restore text
+                this.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+            });
+        });
+    });
+});
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Add CSS animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

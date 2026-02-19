@@ -1,0 +1,1283 @@
+{% extends "monitor/base.html" %}
+{% load static %}
+
+{% block title %}{{ device.name }} - Network Device{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary: #3b82f6;
+    --primary-dark: #2563eb;
+    --secondary: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #06b6d4;
+    --dark: #1e293b;
+    --darker: #0f172a;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --card-bg: #1e293b;
+    --header-bg: #0f172a;
+}
+
+.device-detail {
+    padding: 2rem;
+    background: var(--darker);
+    min-height: 100vh;
+}
+
+.device-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--header-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.device-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.device-info {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    color: var(--text-muted);
+}
+
+.device-type {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 1024px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 1rem 0;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.info-value {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.metric-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--darker);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.metric-name {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.metric-value {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.interface-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.interface-card {
+    padding: 1rem;
+    background: var(--darker);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.interface-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.interface-name {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.interface-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.status-active {
+    color: var(--secondary);
+}
+
+.status-inactive {
+    color: var(--danger);
+}
+
+.status-indicator.status-active {
+    background: var(--secondary);
+}
+
+.status-indicator.status-inactive {
+    background: var(--danger);
+}
+
+.interface-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.detail-item {
+    color: var(--text-muted);
+}
+
+.events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.event-item {
+    padding: 1rem;
+    background: var(--darker);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.event-type {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.event-severity {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.severity-high {
+    background: var(--danger);
+    color: white;
+}
+
+.severity-medium {
+    background: var(--warning);
+    color: var(--dark);
+}
+
+.severity-low {
+    background: var(--info);
+    color: white;
+}
+
+.event-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: var(--border);
+    color: var(--text);
+}
+
+.btn-secondary:hover {
+    background: #475569;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+.chart-container {
+    height: 200px;
+    margin-top: 1rem;
+}
+
+/* Bandwidth Monitoring Styles */
+.bandwidth-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-group label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.form-control {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--darker);
+    color: var(--text);
+    font-size: 0.875rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.loading-indicator {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+.bandwidth-summary {
+    margin-bottom: 2rem;
+    transition: opacity 0.3s ease;
+}
+
+.interfaces-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-item {
+    padding: 1rem;
+    background: var(--darker);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.summary-label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.summary-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.bandwidth-consumers h3 {
+    color: var(--text);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.consumers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.consumer-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--darker);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.consumer-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.consumer-info {
+    flex: 1;
+}
+
+.consumer-ip {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+}
+
+.consumer-device {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.consumer-protocols {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.protocol-tag {
+    padding: 0.125rem 0.375rem;
+    background: var(--border);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.consumer-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.consumer-bytes {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.consumer-connections {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+    .bandwidth-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .consumer-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .consumer-stats {
+        align-items: flex-start;
+        width: 100%;
+        border-top: 1px solid var(--border);
+        padding-top: 1rem;
+        margin-top: 0.5rem;
+    }
+}
+
+/* SSL Certificate Styles */
+.ssl-certificates {
+    display: grid;
+    gap: 1rem;
+}
+
+.ssl-certificate-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.ssl-certificate-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.cert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.cert-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cert-host {
+    font-weight: 600;
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+}
+
+.cert-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+}
+
+.cert-days {
+    text-align: right;
+}
+
+.days-count {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.days-count.expired {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.cert-details {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.cert-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
+.cert-label {
+    font-weight: 500;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.cert-value {
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    text-align: right;
+}
+
+.cert-error {
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--danger);
+    border-radius: 4px;
+    text-align: center;
+}
+
+.error-message {
+    color: var(--danger);
+    font-weight: 500;
+}
+
+/* Status-specific colors */
+.cert-status[style*="#28a745"] { background: #28a745; } /* Good */
+.cert-status[style*="#17a2b8"] { background: #17a2b8; } /* Info */
+.cert-status[style*="#ffc107"] { background: #ffc107; color: #000; } /* Warning */
+.cert-status[style*="#fd7e14"] { background: #fd7e14; } /* Critical */
+.cert-status[style*="#dc3545"] { background: #dc3545; } /* Expired */
+.cert-status[style*="#6c757d"] { background: #6c757d; } /* Error */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="device-detail" data-device-id="{{ device.id }}" data-device-type="{{ device.device_type }}">
+    <div class="device-header">
+        <div>
+            <h1 class="device-title">{{ device.name }}</h1>
+            <div class="device-info">
+                <span>{{ device.ip_address }}</span>
+                <span class="device-type">{{ device.get_device_type_display }}</span>
+            </div>
+        </div>
+        <div>
+            <a href="{% url "network_dashboard" %}" class="btn btn-secondary">Back to Network Dashboard</a>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <div class="card">
+            <h2 class="card-title">Device Information</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">IP Address</span>
+                    <span class="info-value">{{ device.ip_address }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Device Type</span>
+                    <span class="info-value">{{ device.get_device_type_display }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">SNMP Port</span>
+                    <span class="info-value">{{ device.snmp_port }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">API Port</span>
+                    <span class="info-value">{{ device.api_port }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Last Checked</span>
+                    <span class="info-value">{{ device.last_checked|date:"Y-m-d H:i:s"|default:"Never" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Status</span>
+                    <span class="info-value">{{ device.enabled|yesno:"Enabled,Disabled" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">Latest Metrics</h2>
+            {% if metrics_by_name %}
+                <div class="metric-list">
+                    {% for metric_name, values in metrics_by_name.items %}
+                        {% if values %}
+                            {% with last_metric=values|last %}
+                            <div class="metric-item">
+                                <span class="metric-name">{{ metric_name|title }}</span>
+                                <span class="metric-value">{{ last_metric.value }} {{ last_metric.unit }}</span>
+                            </div>
+                            {% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <p>No metrics available yet</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if device.device_type == 'FIREWALL' %}
+        <div class="card">
+            <h2 class="card-title">Per-IP Bandwidth Usage</h2>
+            <div class="bandwidth-controls">
+                <div class="control-group">
+                    <label for="bandwidth-hours">Time Period:</label>
+                    <select id="bandwidth-hours" class="form-control">
+                        <option value="1">Last Hour</option>
+                        <option value="6">Last 6 Hours</option>
+                        <option value="24" selected>Last 24 Hours</option>
+                        <option value="168">Last Week</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="bandwidth-limit">Show Top:</label>
+                    <select id="bandwidth-limit" class="form-control">
+                        <option value="10">10 IPs</option>
+                        <option value="25">25 IPs</option>
+                        <option value="50" selected>50 IPs</option>
+                        <option value="100">100 IPs</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button id="refresh-bandwidth" class="btn btn-secondary">Refresh</button>
+                </div>
+            </div>
+            
+            <div id="bandwidth-loading" class="loading-indicator" style="display: none;">
+                <p>Loading bandwidth data...</p>
+            </div>
+            
+            <div id="bandwidth-content">
+                <div id="bandwidth-summary" class="bandwidth-summary">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Data Transferred</span>
+                            <span class="summary-value" id="total-bytes">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Unique IPs</span>
+                            <span class="summary-value" id="unique-ips">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Connections</span>
+                            <span class="summary-value" id="total-connections">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="bandwidth-consumers" class="bandwidth-consumers">
+                    <h3>Top Bandwidth Consumers</h3>
+                    <div id="consumers-list" class="consumers-list">
+                        <div class="empty-state">
+                            <p>No bandwidth data available</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if device.device_type == 'FIREWALL' and device.ip_address == '192.168.253.2' %}
+        <div class="card">
+            <h2 class="card-title">Firewall Interfaces <span class="live-indicator">● LIVE</span></h2>
+            <div class="interfaces-controls">
+                <button id="refresh-interfaces" class="btn btn-secondary">Refresh Interfaces</button>
+                <span class="last-update" id="interfaces-last-update">Loading...</span>
+            </div>
+            
+            <div id="interfaces-loading" class="loading-indicator" style="display: none;">
+                <p>Loading interface data from firewall...</p>
+            </div>
+            
+            <div id="interfaces-content">
+                <div id="interfaces-grid" class="interfaces-grid">
+                    <!-- Interfaces will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if interface_data %}
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 class="card-title">Network Interfaces</h2>
+            <div class="interface-list">
+                {% for data in interface_data %}
+                    <div class="interface-card">
+                        <div class="interface-header">
+                            <span class="interface-name">{{ data.interface.name }}</span>
+                            <div class="interface-status">
+                                <div class="status-indicator {% if data.interface.status == 'up' %}status-up{% else %}status-down{% endif %}"></div>
+                                <span>{{ data.interface.status|title }}</span>
+                            </div>
+                        </div>
+                        <div class="interface-details">
+                            <div class="detail-item">Speed: {{ data.interface.speed|default:"Unknown" }} Mbps</div>
+                            <div class="detail-item">MTU: {{ data.interface.mtu|default:"Unknown" }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if ssl_certificates %}
+        <div class="card">
+            <h2 class="card-title">SSL Certificates</h2>
+            <div class="ssl-certificates">
+                {% for port, cert in ssl_certificates.items %}
+                    <div class="ssl-certificate-card">
+                        <div class="cert-header">
+                            <div class="cert-info">
+                                <span class="cert-host">{{ cert.hostname }}:{{ cert.port }}</span>
+                                <span class="cert-status" style="background-color: {{ cert.status_color }};">
+                                    {{ cert.status|title }}
+                                </span>
+                            </div>
+                            <div class="cert-days">
+                                {% if cert.days_remaining >= 0 %}
+                                    <span class="days-count">{{ cert.days_remaining }} days</span>
+                                {% else %}
+                                    <span class="days-count expired">EXPIRED</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if cert.status != 'error' %}
+                            <div class="cert-details">
+                                <div class="cert-row">
+                                    <span class="cert-label">Subject:</span>
+                                    <span class="cert-value">{{ cert.subject_common_name }}</span>
+                                </div>
+                                <div class="cert-row">
+                                    <span class="cert-label">Issuer:</span>
+                                    <span class="cert-value">{{ cert.issuer_common_name }}</span>
+                                </div>
+                                <div class="cert-row">
+                                    <span class="cert-label">Valid From:</span>
+                                    <span class="cert-value">{{ cert.issued_date }}</span>
+                                </div>
+                                <div class="cert-row">
+                                    <span class="cert-label">Expires:</span>
+                                    <span class="cert-value">{{ cert.expiry_date }}</span>
+                                </div>
+                                {% if cert.subject_alt_names %}
+                                <div class="cert-row">
+                                    <span class="cert-label">Alt Names:</span>
+                                    <span class="cert-value">{{ cert.subject_alt_names|join:", " }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="cert-row">
+                                    <span class="cert-label">Algorithm:</span>
+                                    <span class="cert-value">{{ cert.signature_algorithm }}</span>
+                                </div>
+                                <div class="cert-row">
+                                    <span class="cert-label">Checked:</span>
+                                    <span class="cert-value">{{ cert.checked_at }}</span>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="cert-error">
+                                <span class="error-message">{{ cert.error }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if security_events %}
+        <div class="card">
+            <h2 class="card-title">Security Events (Last 100)</h2>
+            <div class="events-list">
+                {% for event in security_events %}
+                    <div class="event-item">
+                        <div class="event-header">
+                            <span class="event-type">{{ event.get_event_type_display }}</span>
+                            <span class="event-severity severity-{{ event.severity }}">{{ event.severity }}</span>
+                        </div>
+                        <div class="event-details">
+                            <span>{{ event.timestamp|date:"Y-m-d H:i:s" }}</span>
+                            {% if event.source_ip %}<span>Source: {{ event.source_ip }}</span>{% endif %}
+                            {% if event.dest_ip %}<span>Destination: {{ event.dest_ip }}</span>{% endif %}
+                            {% if event.rule_name %}<span>Rule: {{ event.rule_name }}</span>{% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// Extract device data from HTML attributes to avoid linting issues
+const deviceElement = document.querySelector('.device-detail');
+const deviceId = parseInt(deviceElement?.dataset.deviceId || '0');
+const deviceType = deviceElement?.dataset.deviceType || '';
+const isFirewall = deviceType === 'FIREWALL';
+
+// Bandwidth monitoring functionality
+class BandwidthMonitor {
+    constructor() {
+        this.loading = document.getElementById('bandwidth-loading');
+        this.content = document.getElementById('bandwidth-content');
+        this.summary = document.getElementById('bandwidth-summary');
+        this.consumers = document.getElementById('consumers-list');
+        
+        this.initEventListeners();
+        this.loadBandwidthData();
+    }
+    
+    initEventListeners() {
+        // Refresh button
+        document.getElementById('refresh-bandwidth')?.addEventListener('click', () => {
+            this.loadBandwidthData();
+        });
+        
+        // Time period change
+        document.getElementById('bandwidth-hours')?.addEventListener('change', () => {
+            this.loadBandwidthData();
+        });
+        
+        // Limit change
+        document.getElementById('bandwidth-limit')?.addEventListener('change', () => {
+            this.loadBandwidthData();
+        });
+    }
+    
+    async loadBandwidthData() {
+        try {
+            this.showLoading(true);
+            
+            const hours = document.getElementById('bandwidth-hours')?.value || 24;
+            const limit = document.getElementById('bandwidth-limit')?.value || 50;
+            
+            // Fetch both summary and consumers data
+            const [summaryResponse, consumersResponse] = await Promise.all([
+                fetch(`/api/bandwidth/device/${deviceId}/ip/?view=summary&hours=${hours}`),
+                fetch(`/api/bandwidth/device/${deviceId}/ip/?view=consumers&hours=${hours}&limit=${limit}`)
+            ]);
+            
+            const summaryData = await summaryResponse.json();
+            const consumersData = await consumersResponse.json();
+            
+            if (summaryResponse.ok && consumersResponse.ok) {
+                this.displaySummary(summaryData.data);
+                this.displayConsumers(consumersData.data);
+            } else {
+                this.displayError(summaryData.error || consumersData.error || 'Failed to load bandwidth data');
+            }
+            
+        } catch (error) {
+            console.error('Error loading bandwidth data:', error);
+            this.displayError('Network error while loading bandwidth data');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+    
+    displaySummary(summary) {
+        if (!summary) return;
+        
+        document.getElementById('total-bytes').textContent = this.formatBytes(summary.total_bytes_total);
+        document.getElementById('unique-ips').textContent = summary.unique_ips || 0;
+        document.getElementById('total-connections').textContent = summary.total_connections || 0;
+    }
+    
+    displayConsumers(consumers) {
+        if (!consumers || consumers.length === 0) {
+            this.consumers.innerHTML = `
+                <div class="empty-state">
+                    <p>No bandwidth data available</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const html = consumers.map(consumer => `
+            <div class="consumer-item">
+                <div class="consumer-info">
+                    <div class="consumer-ip">${consumer.ip_address}</div>
+                    ${consumer.hostname ? `<div class="consumer-device">${consumer.hostname}</div>` : ''}
+                    <div class="consumer-device">${consumer.device_name || 'Unknown Device'}</div>
+                    <div class="consumer-protocols">
+                        ${consumer.protocols.map(protocol => 
+                            `<span class="protocol-tag">${protocol}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+                <div class="consumer-stats">
+                    <div class="consumer-bytes">${this.formatBytes(consumer.total_bytes)}</div>
+                    <div class="consumer-connections">${consumer.connections} connections</div>
+                </div>
+            </div>
+        `).join('');
+        
+        this.consumers.innerHTML = html;
+    }
+    
+    displayError(error) {
+        this.consumers.innerHTML = `
+            <div class="empty-state">
+                <p style="color: var(--danger);">Error: ${error}</p>
+            </div>
+        `;
+    }
+    
+    showLoading(show) {
+        if (this.loading) {
+            this.loading.style.display = show ? 'block' : 'none';
+        }
+        if (this.content) {
+            this.content.style.display = show ? 'none' : 'block';
+        }
+    }
+    
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+}
+
+// Firewall Interface Monitoring
+class FirewallInterfaceMonitor {
+    constructor() {
+        console.log('FirewallInterfaceMonitor constructor called');
+        
+        this.loading = document.getElementById('interfaces-loading');
+        this.content = document.getElementById('interfaces-content');
+        this.grid = document.getElementById('interfaces-grid');
+        this.lastUpdate = document.getElementById('interfaces-last-update');
+        this.previousInterfaces = [];
+        
+        console.log('Elements found:', {
+            loading: !!this.loading,
+            content: !!this.content,
+            grid: !!this.grid,
+            lastUpdate: !!this.lastUpdate
+        });
+        
+        this.initEventListeners();
+        this.loadInterfaces();
+        
+        // Auto-refresh every 10 minutes
+        setInterval(() => this.loadInterfaces(), 600000);
+    }
+    
+    initEventListeners() {
+        document.getElementById('refresh-interfaces')?.addEventListener('click', () => {
+            this.loadInterfaces();
+        });
+    }
+    
+    async loadInterfaces() {
+        try {
+            console.log('Loading interfaces...');
+            this.showLoading(true);
+            
+            // Update last update to show refreshing
+            if (this.lastUpdate) {
+                this.lastUpdate.textContent = 'Refreshing...';
+            }
+            
+            const url = `/api/network/device/${deviceId}/interfaces/`;
+            console.log('Fetching from:', url);
+            
+            const response = await fetch(url);
+            console.log('Response status:', response.status);
+            
+            const data = await response.json();
+            console.log('Response data:', data);
+            
+            if (data.success) {
+                console.log('Success! Displaying interfaces:', data.interfaces);
+                this.displayInterfaces(data.interfaces);
+                this.updateLastUpdate(data.timestamp);
+                
+                // Check for changes and notify
+                this.checkForChanges(data.interfaces);
+                this.previousInterfaces = data.interfaces;
+            } else {
+                console.log('API returned error:', data.error);
+                this.displayError(data.error || 'Failed to load interface data');
+                if (this.lastUpdate) {
+                    this.lastUpdate.textContent = 'Error loading data';
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error loading interfaces:', error);
+            this.displayError('Network error while loading interface data');
+            if (this.lastUpdate) {
+                this.lastUpdate.textContent = 'Network error';
+            }
+        } finally {
+            console.log('Hiding loading indicator');
+            this.showLoading(false);
+        }
+    }
+    
+    displayInterfaces(interfaces) {
+        if (!interfaces || interfaces.length === 0) {
+            this.grid.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <p>No interface data available</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Sort interfaces by usage (highest first)
+        const sortedInterfaces = [...interfaces].sort((a, b) => b.usage - a.usage);
+        
+        const html = sortedInterfaces.map(iface => {
+            const maxUsage = Math.max(...interfaces.map(i => i.usage));
+            const usagePercent = maxUsage > 0 ? (iface.usage / maxUsage) * 100 : 0;
+            
+            return `
+                <div class="interface-card">
+                    <div class="interface-header">
+                        <span class="interface-name">${iface.name}</span>
+                        <div class="interface-status">
+                            <div class="status-indicator status-${iface.status}"></div>
+                            <span class="status-${iface.status}">${iface.status}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="interface-usage">
+                        <span class="usage-value">${iface.usage}</span>
+                        <span class="usage-label">connections</span>
+                    </div>
+                    
+                    <div class="usage-bar">
+                        <div class="usage-fill" style="width: ${usagePercent}%"></div>
+                    </div>
+                    
+                    <div class="interface-details">
+                        <div><strong>IP Address:</strong> ${iface.ip_address || 'N/A'}</div>
+                        <div><strong>Transaction ID:</strong> ${iface.transaction_id || 'N/A'}</div>
+                        <div><strong>Status:</strong> ${iface.status}</div>
+                        <div><strong>Type:</strong> ${iface.type || 'Unknown'}</div>
+                        <div><strong>Speed:</strong> ${iface.speed || 'N/A'}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Update content smoothly without hiding
+        if (this.grid) {
+            this.grid.style.opacity = '0.7';
+            setTimeout(() => {
+                this.grid.innerHTML = html;
+                this.grid.style.opacity = '1';
+            }, 100);
+        }
+    }
+    
+    checkForChanges(currentInterfaces) {
+        if (this.previousInterfaces.length === 0) return;
+        
+        const changes = this.detectChanges(currentInterfaces, this.previousInterfaces);
+        
+        if (changes.added.length > 0 || changes.removed.length > 0 || changes.modified.length > 0) {
+            this.showChangeNotification(changes);
+        }
+    }
+    
+    detectChanges(current, previous) {
+        const currentLookup = {};
+        const previousLookup = {};
+        
+        current.forEach(iface => currentLookup[iface.name] = iface);
+        previous.forEach(iface => previousLookup[iface.name] = iface);
+        
+        const changes = {
+            added: [],
+            removed: [],
+            modified: []
+        };
+        
+        // Find added
+        Object.keys(currentLookup).forEach(name => {
+            if (!previousLookup[name]) {
+                changes.added.push(currentLookup[name]);
+            }
+        });
+        
+        // Find removed
+        Object.keys(previousLookup).forEach(name => {
+            if (!currentLookup[name]) {
+                changes.removed.push(previousLookup[name]);
+            }
+        });
+        
+        // Find modified
+        Object.keys(currentLookup).forEach(name => {
+            if (previousLookup[name]) {
+                const curr = currentLookup[name];
+                const prev = previousLookup[name];
+                
+                if (curr.usage !== prev.usage || curr.status !== prev.status) {
+                    changes.modified.push({
+                        name: name,
+                        old_usage: prev.usage,
+                        new_usage: curr.usage,
+                        old_status: prev.status,
+                        new_status: curr.status
+                    });
+                }
+            }
+        });
+        
+        return changes;
+    }
+    
+    showChangeNotification(changes) {
+        let message = 'Interface changes detected:\n';
+        
+        if (changes.added.length > 0) {
+            message += `Added: ${changes.added.map(i => i.name).join(', ')}\n`;
+        }
+        
+        if (changes.removed.length > 0) {
+            message += `Removed: ${changes.removed.map(i => i.name).join(', ')}\n`;
+        }
+        
+        if (changes.modified.length > 0) {
+            message += `Modified: ${changes.modified.map(i => `${i.name} (${i.old_usage}→${i.new_usage})`).join(', ')}\n`;
+        }
+        
+        // Show a subtle notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--info);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            z-index: 1000;
+            max-width: 300px;
+            animation: slideIn 0.3s ease;
+        `;
+        notification.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">Interfaces Updated</div>
+            <div style="font-size: 0.875rem;">${message}</div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
+    
+    updateLastUpdate(timestamp) {
+        if (this.lastUpdate) {
+            const date = new Date(timestamp);
+            this.lastUpdate.textContent = `Last updated: ${date.toLocaleTimeString()}`;
+        }
+    }
+    
+    displayError(error) {
+        this.grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <p style="color: var(--danger);">Error: ${error}</p>
+            </div>
+        `;
+    }
+    
+    showLoading(show) {
+        console.log('FirewallInterfaceMonitor showLoading called with:', show);
+        console.log('Loading element:', this.loading);
+        
+        // Only control the loading indicator, never hide the content
+        if (this.loading) {
+            this.loading.style.display = show ? 'block' : 'none';
+            console.log('Set loading display to:', this.loading.style.display);
+        }
+        
+        // Keep content always visible
+        if (this.content) {
+            this.content.style.display = 'block';
+        }
+    }
+}
+
+// Add CSS animations for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
+// Initialize bandwidth monitoring if device is a firewall
+if (isFirewall) {
+    document.addEventListener('DOMContentLoaded', function() {
+        new BandwidthMonitor();
+        
+        // Initialize interface monitoring for Sophos Firewall
+        console.log('Checking for firewall interface monitoring...');
+        console.log('Device IP:', '{{ device.ip_address }}');
+        
+        if ('{{ device.ip_address }}' === '192.168.253.2') {
+            console.log('Initializing FirewallInterfaceMonitor...');
+            new FirewallInterfaceMonitor();
+        } else {
+            console.log('Not a Sophos Firewall, skipping interface monitoring');
+        }
+    });
+}
+
+// Auto-refresh every 10 minutes
+setTimeout(function() {
+    window.location.reload();
+}, 600000);
+</script>
+{% endblock %}

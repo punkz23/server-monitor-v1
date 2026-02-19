@@ -1,0 +1,927 @@
+{% load tz %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ServerWatch - {{ server.name }}</title>
+  <style>
+    :root {
+      --bg-primary: #0f0f23;
+      --bg-secondary: #1a1b3a;
+      --bg-tertiary: #252641;
+      --text-primary: #e4e4e7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --border: #27272a;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --unknown: #6b7280;
+      --card-bg: #181929;
+      --hover-bg: #272844;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    
+    a:hover {
+      color: var(--accent-hover);
+      text-decoration: underline;
+    }
+    
+    .muted {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    
+    code {
+      background: var(--bg-tertiary);
+      color: var(--accent);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.875rem;
+      border: 1px solid var(--border);
+      word-break: break-all;
+    }
+    
+    .row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 16px 0;
+      padding: 16px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    
+    label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      display: block;
+      margin-bottom: 4px;
+    }
+    
+    select {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      background: var(--card-bg);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      margin: 20px 0;
+      transition: all 0.2s ease;
+    }
+    
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.4);
+    }
+    
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 980px;
+      height: 320px;
+      border-radius: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+    }
+    
+    .legend {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 12px;
+    }
+    
+    .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    
+    .status {
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      font-size: 0.875rem;
+    }
+    
+    .up {
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .down {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    
+    .unknown {
+      color: var(--unknown);
+      background: rgba(107, 114, 128, 0.1);
+      border: 1px solid rgba(107, 114, 128, 0.2);
+    }
+    
+    .unhealthy {
+      color: var(--warning);
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body data-server-id="{{ server.id }}">
+  <div class="muted"><a href="{% url 'dashboard' %}">Back</a></div>
+  <h1>{{ server.name }}</h1>
+  <div class="muted">{{ server.ip_address }}:{{ server.port }}</div>
+  <div class="muted" style="margin-top: 6px;">Agent token: {% if server.agent_token %}<code>{{ server.agent_token }}</code>{% else %}-{% endif %}</div>
+
+  <div class="row">
+    <div>
+      <label for="metric">Metric</label>
+      <select id="metric">
+        <option value="latency">Latency (ms)</option>
+        <option value="http">HTTP status</option>
+        <option value="uptime">Uptime %</option>
+      </select>
+    </div>
+    <div>
+      <label for="range">Range</label>
+      <select id="range">
+        <option value="30">Last 30</option>
+        <option value="100">Last 100</option>
+        <option value="500">Last 500</option>
+        <option value="1h">Last 1h</option>
+        <option value="6h">Last 6h</option>
+        <option value="24h">Last 24h</option>
+        <option value="7d">Last 7d</option>
+        <option value="all">All (max 2000)</option>
+      </select>
+    </div>
+    <div class="muted" id="live-state">connecting...</div>
+  </div>
+
+  <div class="card">
+    <canvas id="chart" width="980" height="320"></canvas>
+    <div class="legend muted" style="margin-top: 8px;">
+      <span class="dot" style="background:#0f766e"></span>Healthy
+      <span style="margin-left: 12px;"><span class="dot" style="background:#d97706"></span>Unhealthy</span>
+      <span style="margin-left: 12px;"><span class="dot" style="background:#b91c1c"></span>Unreachable</span>
+      <span style="margin-left: 12px;"><span class="dot" style="background:#6b7280"></span>N/A</span>
+    </div>
+  </div>
+
+  <h2 style="margin-top: 26px;">Resources</h2>
+  <div class="row">
+    <div>
+      <label for="resource-metric">Metric</label>
+      <select id="resource-metric">
+        <option value="cpu">CPU %</option>
+        <option value="ram">RAM %</option>
+        <option value="load">Load (1m)</option>
+        <option value="disk_usage">Disk usage %</option>
+        <option value="disk_io">Disk I/O (MB/s)</option>
+        <option value="net">Network (KB/s)</option>
+      </select>
+    </div>
+    <div id="mount-wrap" style="display:none;">
+      <label for="disk-mount">Mount</label>
+      <select id="disk-mount"></select>
+    </div>
+    <div class="muted" id="resource-state">loading...</div>
+  </div>
+  <div class="card">
+    <canvas id="resource-chart" width="980" height="320"></canvas>
+  </div>
+
+  <h2 style="margin-top: 26px;">Database</h2>
+  <div class="row">
+    <div>
+      <label for="db-metric">Metric</label>
+      <select id="db-metric">
+        <option value="conn_usage">Connection usage %</option>
+        <option value="connections">Current connections</option>
+        <option value="qps">Queries/sec (QPS)</option>
+        <option value="rw">Reads vs writes (QPS)</option>
+        <option value="latency">Ping / query latency (ms)</option>
+        <option value="slow">Slow queries (last 1m)</option>
+      </select>
+    </div>
+    <div class="muted" id="db-state">loading...</div>
+  </div>
+  <div class="card">
+    <canvas id="db-chart" width="980" height="320"></canvas>
+  </div>
+
+  <h2 style="margin-top: 26px;">Reboot history</h2>
+  <div class="card">
+    <div class="muted" id="reboots"></div>
+  </div>
+
+  <script>
+    (function () {
+      const SERVER_ID = Number(document.body.getAttribute('data-server-id'));
+      const stateEl = document.getElementById('live-state');
+      const metricEl = document.getElementById('metric');
+      const rangeEl = document.getElementById('range');
+      const canvas = document.getElementById('chart');
+      const ctx = canvas.getContext('2d');
+
+      const resourceMetricEl = document.getElementById('resource-metric');
+      const resourceCanvas = document.getElementById('resource-chart');
+      const resourceCtx = resourceCanvas.getContext('2d');
+      const resourceStateEl = document.getElementById('resource-state');
+      const mountWrapEl = document.getElementById('mount-wrap');
+      const mountEl = document.getElementById('disk-mount');
+      const rebootsEl = document.getElementById('reboots');
+
+      const dbMetricEl = document.getElementById('db-metric');
+      const dbCanvas = document.getElementById('db-chart');
+      const dbCtx = dbCanvas.getContext('2d');
+      const dbStateEl = document.getElementById('db-state');
+
+      let points = [];
+      let lastSeenCheckedAt = null;
+      let resourcePoints = [];
+      let diskUsagePoints = [];
+      let diskIoPoints = [];
+      let netPoints = [];
+      let lastSeenResourceAt = null;
+      let dbPoints = [];
+      let lastSeenDbAt = null;
+      let socket = null;
+      let reconnectTimer = null;
+
+      function setState(t) { if (stateEl) stateEl.textContent = t; }
+      function setResourceState(t) { if (resourceStateEl) resourceStateEl.textContent = t; }
+      function setDbState(t) { if (dbStateEl) dbStateEl.textContent = t; }
+
+      function dbMetricValue(p, metric) {
+        if (metric === 'conn_usage') return (typeof p.connection_usage_percent === 'number') ? p.connection_usage_percent : null;
+        if (metric === 'connections') return (typeof p.current_connections === 'number') ? p.current_connections : null;
+        if (metric === 'qps') return (typeof p.qps === 'number') ? p.qps : null;
+        if (metric === 'rw') {
+          const r = (typeof p.read_qps === 'number') ? p.read_qps : null;
+          const w = (typeof p.write_qps === 'number') ? p.write_qps : null;
+          if (r === null && w === null) return null;
+          return (r || 0) + (w || 0);
+        }
+        if (metric === 'slow') return (typeof p.slow_queries_1m === 'number') ? p.slow_queries_1m : null;
+        if (metric === 'latency') {
+          if (typeof p.ping_ms === 'number') return p.ping_ms;
+          if (typeof p.avg_query_ms === 'number') return p.avg_query_ms;
+          return null;
+        }
+        return null;
+      }
+
+      function drawDb() {
+        if (!dbCtx) return;
+
+        const w = dbCanvas.width;
+        const h = dbCanvas.height;
+        const padL = 44;
+        const padR = 10;
+        const padT = 10;
+        const padB = 26;
+
+        dbCtx.clearRect(0, 0, w, h);
+        dbCtx.strokeStyle = '#e5e7eb';
+        dbCtx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+        const metric = dbMetricEl.value;
+        const vals = dbPoints.map(p => dbMetricValue(p, metric));
+        const nums = vals.filter(v => typeof v === 'number');
+        if (!nums.length) return;
+
+        const min = Math.min(...nums);
+        const max = Math.max(...nums);
+        const range = (max - min) || 1;
+
+        function xFor(i, n) {
+          if (n <= 1) return padL;
+          return padL + (w - padL - padR) * (i / (n - 1));
+        }
+
+        function yFor(v) {
+          if (typeof v !== 'number') return null;
+          const t = (v - min) / range;
+          return padT + (h - padT - padB) * (1 - t);
+        }
+
+        dbCtx.fillStyle = '#6b7280';
+        dbCtx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+        dbCtx.textAlign = 'right';
+        dbCtx.textBaseline = 'middle';
+        dbCtx.fillText(String(max.toFixed ? max.toFixed(2) : max), padL - 6, padT + 6);
+        dbCtx.fillText(String(min.toFixed ? min.toFixed(2) : min), padL - 6, h - padB);
+
+        dbCtx.strokeStyle = '#e5e7eb';
+        dbCtx.beginPath();
+        dbCtx.moveTo(padL, h - padB + 0.5);
+        dbCtx.lineTo(w - padR, h - padB + 0.5);
+        dbCtx.stroke();
+
+        dbCtx.lineWidth = 2;
+        dbCtx.strokeStyle = '#2563eb';
+
+        for (let i = 1; i < dbPoints.length; i++) {
+          const y0 = yFor(vals[i - 1]);
+          const y1 = yFor(vals[i]);
+          if (y0 === null || y1 === null) continue;
+          const x0 = xFor(i - 1, dbPoints.length);
+          const x1 = xFor(i, dbPoints.length);
+          dbCtx.beginPath();
+          dbCtx.moveTo(x0, y0);
+          dbCtx.lineTo(x1, y1);
+          dbCtx.stroke();
+        }
+
+        if (metric === 'rw') {
+          const reads = dbPoints.map(p => (typeof p.read_qps === 'number') ? p.read_qps : null);
+          const writes = dbPoints.map(p => (typeof p.write_qps === 'number') ? p.write_qps : null);
+
+          dbCtx.lineWidth = 1.5;
+          dbCtx.strokeStyle = '#16a34a';
+          for (let i = 1; i < dbPoints.length; i++) {
+            const y0 = yFor(reads[i - 1]);
+            const y1 = yFor(reads[i]);
+            if (y0 === null || y1 === null) continue;
+            const x0 = xFor(i - 1, dbPoints.length);
+            const x1 = xFor(i, dbPoints.length);
+            dbCtx.beginPath();
+            dbCtx.moveTo(x0, y0);
+            dbCtx.lineTo(x1, y1);
+            dbCtx.stroke();
+          }
+
+          dbCtx.strokeStyle = '#f97316';
+          for (let i = 1; i < dbPoints.length; i++) {
+            const y0 = yFor(writes[i - 1]);
+            const y1 = yFor(writes[i]);
+            if (y0 === null || y1 === null) continue;
+            const x0 = xFor(i - 1, dbPoints.length);
+            const x1 = xFor(i, dbPoints.length);
+            dbCtx.beginPath();
+            dbCtx.moveTo(x0, y0);
+            dbCtx.lineTo(x1, y1);
+            dbCtx.stroke();
+          }
+        }
+      }
+
+      function wsUrl(path) {
+        const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        return scheme + '://' + window.location.host + path;
+      }
+
+      async function loadDbSeries() {
+        const range = rangeEl.value;
+        setDbState('loading');
+        try {
+          const resp = await fetch('/api/servers/' + SERVER_ID + '/db/series/?range=' + encodeURIComponent(range), { cache: 'no-store' });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const data = await resp.json();
+          dbPoints = Array.isArray(data.points) ? data.points : [];
+          const last = dbPoints.length ? dbPoints[dbPoints.length - 1] : null;
+          lastSeenDbAt = last && last.collected_at ? last.collected_at : null;
+          setDbState('on');
+          drawDb();
+        } catch (e) {
+          dbPoints = [];
+          setDbState('off');
+        }
+      }
+
+      function resMetricValue(p, metric, idx) {
+        if (metric === 'cpu') return (typeof p.cpu_percent === 'number') ? p.cpu_percent : null;
+        if (metric === 'ram') return (typeof p.ram_percent === 'number') ? p.ram_percent : null;
+        if (metric === 'load') return (typeof p.load_1 === 'number') ? p.load_1 : null;
+        if (metric === 'disk_usage') return (typeof p.percent === 'number') ? p.percent : null;
+
+        if (metric === 'disk_io') {
+          if (idx <= 0) return null;
+          const p0 = diskIoPoints[idx - 1];
+          const p1 = diskIoPoints[idx];
+          if (!p0 || !p1) return null;
+          const t0 = p0.collected_at ? Date.parse(p0.collected_at) : NaN;
+          const t1 = p1.collected_at ? Date.parse(p1.collected_at) : NaN;
+          if (isNaN(t0) || isNaN(t1) || t1 <= t0) return null;
+          const dt = (t1 - t0) / 1000.0;
+          const b0 = (p0.read_bytes || 0) + (p0.write_bytes || 0);
+          const b1 = (p1.read_bytes || 0) + (p1.write_bytes || 0);
+          const d = b1 - b0;
+          if (d < 0) return null;
+          return (d / dt) / (1024 * 1024);
+        }
+
+        if (metric === 'net') {
+          if (idx <= 0) return null;
+          const p0 = netPoints[idx - 1];
+          const p1 = netPoints[idx];
+          if (!p0 || !p1) return null;
+          const t0 = p0.collected_at ? Date.parse(p0.collected_at) : NaN;
+          const t1 = p1.collected_at ? Date.parse(p1.collected_at) : NaN;
+          if (isNaN(t0) || isNaN(t1) || t1 <= t0) return null;
+          const dt = (t1 - t0) / 1000.0;
+          const b0 = (p0.bytes_sent || 0) + (p0.bytes_recv || 0);
+          const b1 = (p1.bytes_sent || 0) + (p1.bytes_recv || 0);
+          const d = b1 - b0;
+          if (d < 0) return null;
+          return (d / dt) / 1024;
+        }
+
+        return null;
+      }
+
+      function drawResource() {
+        if (!resourceCtx) return;
+
+        const w = resourceCanvas.width;
+        const h = resourceCanvas.height;
+        const padL = 44;
+        const padR = 10;
+        const padT = 10;
+        const padB = 26;
+
+        resourceCtx.clearRect(0, 0, w, h);
+        resourceCtx.strokeStyle = '#e5e7eb';
+        resourceCtx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+        const metric = resourceMetricEl.value;
+        let src = resourcePoints;
+        if (metric === 'disk_usage') src = diskUsagePoints;
+        if (metric === 'disk_io') src = diskIoPoints;
+        if (metric === 'net') src = netPoints;
+
+        const vals = src.map((p, idx) => resMetricValue(p, metric, idx));
+        const nums = vals.filter(v => typeof v === 'number');
+        if (!nums.length) return;
+
+        const min = Math.min(...nums);
+        const max = Math.max(...nums);
+        const range = (max - min) || 1;
+
+        function xFor(i, n) {
+          if (n <= 1) return padL;
+          return padL + (w - padL - padR) * (i / (n - 1));
+        }
+
+        function yFor(v) {
+          if (typeof v !== 'number') return null;
+          const t = (v - min) / range;
+          return padT + (h - padT - padB) * (1 - t);
+        }
+
+        resourceCtx.fillStyle = '#6b7280';
+        resourceCtx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+        resourceCtx.textAlign = 'right';
+        resourceCtx.textBaseline = 'middle';
+        resourceCtx.fillText(String(max.toFixed ? max.toFixed(2) : max), padL - 6, padT + 6);
+        resourceCtx.fillText(String(min.toFixed ? min.toFixed(2) : min), padL - 6, h - padB);
+
+        resourceCtx.strokeStyle = '#e5e7eb';
+        resourceCtx.beginPath();
+        resourceCtx.moveTo(padL, h - padB + 0.5);
+        resourceCtx.lineTo(w - padR, h - padB + 0.5);
+        resourceCtx.stroke();
+
+        resourceCtx.lineWidth = 2;
+        resourceCtx.strokeStyle = '#2563eb';
+
+        for (let i = 1; i < src.length; i++) {
+          const y0 = yFor(vals[i - 1]);
+          const y1 = yFor(vals[i]);
+          if (y0 === null || y1 === null) continue;
+          const x0 = xFor(i - 1, src.length);
+          const x1 = xFor(i, src.length);
+          resourceCtx.beginPath();
+          resourceCtx.moveTo(x0, y0);
+          resourceCtx.lineTo(x1, y1);
+          resourceCtx.stroke();
+        }
+      }
+
+      function statusColor(point) {
+        if (!point) return '#6b7280';
+        if (point.status === 'DOWN') return '#b91c1c';
+        if (point.http_ok === false) return '#d97706';
+        if (point.http_ok === true) return '#0f766e';
+        return '#6b7280';
+      }
+
+      function metricValue(p, metric, idx) {
+        if (metric === 'http') {
+          return (typeof p.http_status_code === 'number') ? p.http_status_code : null;
+        }
+        if (metric === 'uptime') {
+          const windowSize = 20;
+          const start = Math.max(0, idx - windowSize + 1);
+          let total = 0;
+          let up = 0;
+          for (let i = start; i <= idx; i++) {
+            const s = points[i] && points[i].status;
+            if (s === 'UP' || s === 'DOWN') {
+              total += 1;
+              if (s === 'UP') up += 1;
+            }
+          }
+          if (!total) return null;
+          return Math.round((up / total) * 100);
+        }
+        return (typeof p.latency_ms === 'number') ? p.latency_ms : null;
+      }
+
+      function draw() {
+        if (!ctx) return;
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const padL = 44;
+        const padR = 10;
+        const padT = 10;
+        const padB = 26;
+
+        ctx.clearRect(0, 0, w, h);
+
+        const metric = metricEl.value;
+        const vals = points.map((p, idx) => metricValue(p, metric, idx));
+        const nums = vals.filter(v => typeof v === 'number');
+
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+        if (!nums.length) return;
+
+        const min = Math.min(...nums);
+        const max = Math.max(...nums);
+        const range = (max - min) || 1;
+
+        function xFor(i, n) {
+          if (n <= 1) return padL;
+          return padL + (w - padL - padR) * (i / (n - 1));
+        }
+
+        function yFor(v) {
+          if (typeof v !== 'number') return null;
+          const t = (v - min) / range;
+          return padT + (h - padT - padB) * (1 - t);
+        }
+
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(max), padL - 6, padT + 6);
+        ctx.fillText(String(min), padL - 6, h - padB);
+
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.beginPath();
+        ctx.moveTo(padL, h - padB + 0.5);
+        ctx.lineTo(w - padR, h - padB + 0.5);
+        ctx.stroke();
+
+        ctx.lineWidth = 2;
+
+        for (let i = 1; i < points.length; i++) {
+          const v0 = vals[i - 1];
+          const v1 = vals[i];
+          const y0 = yFor(v0);
+          const y1 = yFor(v1);
+          if (y0 === null || y1 === null) continue;
+
+          const x0 = xFor(i - 1, points.length);
+          const x1 = xFor(i, points.length);
+
+          ctx.strokeStyle = statusColor(points[i]);
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y1);
+          ctx.stroke();
+        }
+      }
+
+      async function loadSeries() {
+        const range = rangeEl.value;
+        const resp = await fetch('/api/servers/' + SERVER_ID + '/series/?range=' + encodeURIComponent(range), { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        points = Array.isArray(data.points) ? data.points : [];
+        const last = points.length ? points[points.length - 1] : null;
+        lastSeenCheckedAt = last && last.checked_at ? last.checked_at : null;
+        draw();
+      }
+
+      async function loadResourceSeries() {
+        const range = rangeEl.value;
+        setResourceState('loading');
+
+        try {
+          const resp = await fetch('/api/servers/' + SERVER_ID + '/resources/series/?range=' + encodeURIComponent(range), { cache: 'no-store' });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const data = await resp.json();
+          resourcePoints = Array.isArray(data.points) ? data.points : [];
+          const last = resourcePoints.length ? resourcePoints[resourcePoints.length - 1] : null;
+          lastSeenResourceAt = last && last.collected_at ? last.collected_at : null;
+        } catch (e) {
+          resourcePoints = [];
+        }
+
+        try {
+          const ioResp = await fetch('/api/servers/' + SERVER_ID + '/resources/disk-io/?range=' + encodeURIComponent(range), { cache: 'no-store' });
+          if (ioResp.ok) {
+            const ioData = await ioResp.json();
+            diskIoPoints = Array.isArray(ioData.points) ? ioData.points : [];
+          } else {
+            diskIoPoints = [];
+          }
+        } catch (e) {
+          diskIoPoints = [];
+        }
+
+        try {
+          const netResp = await fetch('/api/servers/' + SERVER_ID + '/resources/network/?range=' + encodeURIComponent(range), { cache: 'no-store' });
+          if (netResp.ok) {
+            const netData = await netResp.json();
+            netPoints = Array.isArray(netData.points) ? netData.points : [];
+          } else {
+            netPoints = [];
+          }
+        } catch (e) {
+          netPoints = [];
+        }
+
+        await loadDiskUsage();
+        setResourceState('on');
+        drawResource();
+      }
+
+      async function loadDiskUsage() {
+        const range = rangeEl.value;
+        const metric = resourceMetricEl.value;
+
+        if (metric !== 'disk_usage') {
+          diskUsagePoints = [];
+          if (mountWrapEl) mountWrapEl.style.display = 'none';
+          return;
+        }
+
+        if (mountWrapEl) mountWrapEl.style.display = '';
+        if (mountEl && !mountEl.value && mountEl.options.length) {
+          mountEl.value = mountEl.options[0].value;
+        }
+
+        try {
+          const firstUrl = '/api/servers/' + SERVER_ID + '/resources/disk-usage/?range=' + encodeURIComponent(range);
+          const firstResp = await fetch(firstUrl, { cache: 'no-store' });
+          if (!firstResp.ok) throw new Error('HTTP ' + firstResp.status);
+          const firstData = await firstResp.json();
+          const allPts = Array.isArray(firstData.points) ? firstData.points : [];
+          const mounts = Array.from(new Set(allPts.map(p => p.mount).filter(Boolean)));
+
+          if (mountEl && !mountEl.options.length) {
+            mountEl.innerHTML = '';
+            for (const m of mounts) {
+              const opt = document.createElement('option');
+              opt.value = m;
+              opt.textContent = m;
+              mountEl.appendChild(opt);
+            }
+            if (mountEl.options.length) {
+              mountEl.value = mountEl.options[0].value;
+            }
+          }
+
+          const mount = (mountEl && mountEl.value) ? mountEl.value : '';
+          if (!mount) {
+            diskUsagePoints = allPts;
+            return;
+          }
+
+          const url = '/api/servers/' + SERVER_ID + '/resources/disk-usage/?range=' + encodeURIComponent(range) + '&mount=' + encodeURIComponent(mount);
+          const resp = await fetch(url, { cache: 'no-store' });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const data = await resp.json();
+          diskUsagePoints = Array.isArray(data.points) ? data.points : [];
+        } catch (e) {
+          diskUsagePoints = [];
+        }
+      }
+
+      async function loadReboots() {
+        if (!rebootsEl) return;
+        try {
+          const resp = await fetch('/api/servers/' + SERVER_ID + '/resources/reboots/?limit=20', { cache: 'no-store' });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const data = await resp.json();
+          const events = Array.isArray(data.events) ? data.events : [];
+          if (!events.length) {
+            rebootsEl.textContent = 'No reboot events recorded yet.';
+            return;
+          }
+          rebootsEl.innerHTML = '';
+          const ul = document.createElement('ul');
+          for (const e of events) {
+            const li = document.createElement('li');
+            li.textContent = (e.boot_time ? new Date(e.boot_time).toLocaleString() : '-') + ' (detected ' + (e.detected_at ? new Date(e.detected_at).toLocaleString() : '-') + ')';
+            ul.appendChild(li);
+          }
+          rebootsEl.appendChild(ul);
+        } catch (e) {
+          rebootsEl.textContent = 'Unable to load reboot history.';
+        }
+      }
+
+      function applyLiveUpdate(server) {
+        if (!server || String(server.id) !== String(SERVER_ID)) return;
+        if (server.last_checked && lastSeenCheckedAt === server.last_checked) return;
+        if (server.last_checked) lastSeenCheckedAt = server.last_checked;
+
+        points.push({
+          checked_at: server.last_checked,
+          status: server.last_status,
+          http_ok: (server.last_http_ok === true) ? true : (server.last_http_ok === false ? false : null),
+          latency_ms: server.last_latency_ms,
+          http_status_code: server.last_http_status_code,
+        });
+
+        const range = rangeEl.value;
+        if (range.endsWith('h') || range.endsWith('d')) {
+          const now = Date.now();
+          let windowMs = 0;
+          if (range.endsWith('h')) windowMs = parseInt(range.slice(0, -1), 10) * 3600 * 1000;
+          if (range.endsWith('d')) windowMs = parseInt(range.slice(0, -1), 10) * 24 * 3600 * 1000;
+          if (windowMs > 0) {
+            points = points.filter(p => {
+              const t = p.checked_at ? Date.parse(p.checked_at) : NaN;
+              return !isNaN(t) && (now - t) <= windowMs;
+            });
+          }
+        } else if (range !== 'all') {
+          const n = parseInt(range, 10);
+          if (!isNaN(n) && n > 0) {
+            while (points.length > n) points.shift();
+          }
+        } else {
+          while (points.length > 2000) points.shift();
+        }
+
+        draw();
+
+        if (server.last_resource_checked && lastSeenResourceAt !== server.last_resource_checked) {
+          lastSeenResourceAt = server.last_resource_checked;
+          resourcePoints.push({
+            collected_at: server.last_resource_checked,
+            cpu_percent: (typeof server.last_cpu_percent === 'number') ? server.last_cpu_percent : null,
+            ram_percent: (typeof server.last_ram_percent === 'number') ? server.last_ram_percent : null,
+            load_1: (typeof server.last_load_1 === 'number') ? server.last_load_1 : null,
+            uptime_seconds: (typeof server.last_uptime_seconds === 'number') ? server.last_uptime_seconds : null,
+          });
+          while (resourcePoints.length > 2000) resourcePoints.shift();
+          if (resourceMetricEl.value === 'cpu' || resourceMetricEl.value === 'ram' || resourceMetricEl.value === 'load') {
+            drawResource();
+          }
+        }
+
+        if (server.last_db_checked && lastSeenDbAt !== server.last_db_checked) {
+          lastSeenDbAt = server.last_db_checked;
+          dbPoints.push({
+            collected_at: server.last_db_checked,
+            process_up: server.last_db_process_up,
+            port_ok: server.last_db_port_ok,
+            connect_ok: server.last_db_connect_ok,
+            ping_ms: (typeof server.last_db_ping_ms === 'number') ? server.last_db_ping_ms : null,
+            current_connections: (typeof server.last_db_connections === 'number') ? server.last_db_connections : null,
+            max_connections: (typeof server.last_db_max_connections === 'number') ? server.last_db_max_connections : null,
+            connection_usage_percent: (typeof server.last_db_conn_usage_percent === 'number') ? server.last_db_conn_usage_percent : null,
+            qps: (typeof server.last_db_qps === 'number') ? server.last_db_qps : null,
+            read_qps: (typeof server.last_db_read_qps === 'number') ? server.last_db_read_qps : null,
+            write_qps: (typeof server.last_db_write_qps === 'number') ? server.last_db_write_qps : null,
+            tps: (typeof server.last_db_tps === 'number') ? server.last_db_tps : null,
+            avg_query_ms: (typeof server.last_db_avg_query_ms === 'number') ? server.last_db_avg_query_ms : null,
+            p95_query_ms: (typeof server.last_db_p95_query_ms === 'number') ? server.last_db_p95_query_ms : null,
+            p99_query_ms: (typeof server.last_db_p99_query_ms === 'number') ? server.last_db_p99_query_ms : null,
+            slow_queries_1m: (typeof server.last_db_slow_1m === 'number') ? server.last_db_slow_1m : null,
+          });
+          while (dbPoints.length > 2000) dbPoints.shift();
+          drawDb();
+        }
+      }
+
+      function connectWs() {
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        setState('connecting');
+
+        socket = new WebSocket(wsUrl('/ws/status/'));
+
+        socket.onopen = function () { setState('on'); };
+        socket.onmessage = function (evt) {
+          try {
+            const msg = JSON.parse(evt.data);
+            if (msg && msg.type === 'update' && msg.server) applyLiveUpdate(msg.server);
+          } catch (e) {
+            // ignore
+          }
+        };
+        socket.onclose = function () {
+          setState('reconnecting');
+          reconnectTimer = setTimeout(connectWs, 1000);
+        };
+        socket.onerror = function () {
+          try { socket.close(); } catch (e) { /* ignore */ }
+        };
+      }
+
+      metricEl.addEventListener('change', draw);
+      rangeEl.addEventListener('change', function () {
+        loadSeries().catch(function () { /* ignore */ });
+        loadResourceSeries().catch(function () { /* ignore */ });
+        loadDbSeries().catch(function () { /* ignore */ });
+      });
+
+      dbMetricEl.addEventListener('change', drawDb);
+
+      resourceMetricEl.addEventListener('change', function () {
+        loadDiskUsage().then(drawResource).catch(function () { /* ignore */ });
+        drawResource();
+      });
+
+      if (mountEl) {
+        mountEl.addEventListener('change', function () {
+          loadDiskUsage().then(drawResource).catch(function () { /* ignore */ });
+        });
+      }
+
+      loadSeries().catch(function () { /* ignore */ });
+      loadResourceSeries().catch(function () { /* ignore */ });
+      loadDbSeries().catch(function () { /* ignore */ });
+      loadReboots();
+      connectWs();
+    })();
+  </script>
+</body>
+</html>

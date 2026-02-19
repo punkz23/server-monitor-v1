@@ -1,0 +1,16 @@
+[Unit]
+Description=ServerWatch Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/serverwatch-agent
+ExecStart=/opt/serverwatch-agent/venv/bin/python /opt/serverwatch-agent/serverwatch-agent.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

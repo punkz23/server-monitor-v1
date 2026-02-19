@@ -1,0 +1,3 @@
+Task: Refactor server status check logic for better reliability.
+Summary: Modified `monitor.models.Server` to include `skip_ssl_verification`. Refactored `ServerStatusMonitor.check_server_status` to accept a `Server` object, prioritize checks based on `server.use_https`, and correctly apply SSL verification based on `server.skip_ssl_verification`. Updated callers (`update_all_server_status`, `update_single_server`) to pass the `Server` object. Added `monitor/tests/test_reliability.py` to verify proper SSL verification handling. Database migrations were created and applied.
+Files: `monitor/models.py`, `monitor/migrations/0021_server_skip_ssl_verification.py`, `monitor/services/server_status_monitor.py`, `monitor/tests/test_reliability.py`

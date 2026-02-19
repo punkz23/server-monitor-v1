@@ -1,0 +1,311 @@
+{% extends "monitor/base.html" %}
+
+{% block title %}Network Device Reports{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1>Network Device Reports</h1>
+        <p>Generate and export network device reports categorized by network and ordered by device type</p>
+    </div>
+    <div class="header-actions">
+        <a href="/network/devices/" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Devices
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Report Filters</h3>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="filter-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="network-filter">Network</label>
+                    <select id="network-filter" name="network" class="form-control">
+                        <option value="">All Networks</option>
+                        {% for network in available_networks %}
+                        <option value="{{ network }}" {% if current_filters.network == network %}selected{% endif %}>{{ network }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="device-type-filter">Device Type</label>
+                    <select id="device-type-filter" name="device_type" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="FIREWALL" {% if current_filters.device_type == 'FIREWALL' %}selected{% endif %}>Firewall</option>
+                        <option value="ROUTER" {% if current_filters.device_type == 'ROUTER' %}selected{% endif %}>Router</option>
+                        <option value="SWITCH" {% if current_filters.device_type == 'SWITCH' %}selected{% endif %}>Switch</option>
+                        <option value="ACCESS_POINT" {% if current_filters.device_type == 'ACCESS_POINT' %}selected{% endif %}>Access Point</option>
+                        <option value="PC" {% if current_filters.device_type == 'PC' %}selected{% endif %}>PC/Computer</option>
+                        <option value="MOBILE" {% if current_filters.device_type == 'MOBILE' %}selected{% endif %}>Mobile Phone</option>
+                        <option value="PRINTER" {% if current_filters.device_type == 'PRINTER' %}selected{% endif %}>Printer</option>
+                        <option value="UNKNOWN" {% if current_filters.device_type == 'UNKNOWN' %}selected{% endif %}>Unknown</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="active-filter">Status</label>
+                    <select id="active-filter" name="active" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="true" {% if current_filters.active == 'true' %}selected{% endif %}>Active</option>
+                        <option value="false" {% if current_filters.active == 'false' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+                <a href="/network/reports/" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Export Options</h3>
+    </div>
+    <div class="card-body">
+        <div class="export-buttons">
+            <a href="/network/reports/csv/{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-success">
+                <i class="fas fa-file-csv"></i> Export to CSV
+            </a>
+            <a href="/network/reports/pdf/{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-danger">
+                <i class="fas fa-file-pdf"></i> Export to PDF
+            </a>
+        </div>
+        
+        <div class="report-summary">
+            <h4>Current Selection Summary</h4>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Total Networks:</span>
+                    <span class="stat-value">{{ total_networks }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Devices:</span>
+                    <span class="stat-value">{{ total_devices }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if devices %}
+<div class="card">
+    <div class="card-header">
+        <h3>Device Preview (First 20)</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Network</th>
+                        <th>Device Name</th>
+                        <th>Type</th>
+                        <th>IP Address</th>
+                        <th>MAC Address</th>
+                        <th>Vendor</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% regroup devices by network as network_list %}
+                    {% for network in network_list %}
+                        {% for device in network.list %}
+                            <tr>
+                                <td>
+                                    {% if forloop.first %}
+                                        <strong>{{ network.grouper|default:"Unknown Network" }}</strong>
+                                    {% endif %}
+                                </td>
+                                <td>{{ device.name }}</td>
+                                <td>
+                                    <span class="badge badge-{{ device.device_type|lower }}">{{ device.get_device_type_display }}</span>
+                                </td>
+                                <td>{{ device.ip_address }}</td>
+                                <td>{{ device.mac_address|default:"N/A" }}</td>
+                                <td>{{ device.vendor|default:"N/A" }}</td>
+                                <td>
+                                    {% if device.is_active %}
+                                        <span class="status-indicator status-online"></span>
+                                        Active
+                                    {% else %}
+                                        <span class="status-indicator status-offline"></span>
+                                        Inactive
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if devices.count > 20 %}
+        <div class="text-center mt-3">
+            <p class="text-muted">Showing first 20 devices. Export to see all {{ devices.count }} devices.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center">
+        <div class="empty-state">
+            <h3>No Devices Found</h3>
+            <p>No network devices match the current filters.</p>
+            <a href="/network/reports/" class="btn btn-primary">Clear Filters</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.form-control {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.report-summary h4 {
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.stat-label {
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.stat-value {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.badge-firewall { background: var(--danger); color: white; }
+.badge-router { background: var(--warning); color: white; }
+.badge-switch { background: var(--primary); color: white; }
+.badge-access_point { background: var(--secondary); color: white; }
+.badge-pc { background: var(--info); color: white; }
+.badge-mobile { background: var(--success); color: white; }
+.badge-printer { background: var(--dark); color: white; }
+.badge-unknown { background: var(--muted); color: white; }
+
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status-online { background: var(--secondary); }
+.status-offline { background: var(--danger); }
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.table th,
+.table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.table th {
+    background: var(--card-bg);
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+}
+
+.table-striped tbody tr:nth-child(odd) {
+    background: var(--card-bg);
+}
+
+.empty-state {
+    padding: 3rem;
+    text-align: center;
+}
+
+.empty-state h3 {
+    color: var(--text);
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+}
+</style>
+{% endblock %}

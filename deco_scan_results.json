@@ -1,0 +1,7 @@
+{
+  "scan_time": "2025-12-27T10:19:52.218379",
+  "target_network": "172.10.10.0/24",
+  "deco_device": "172.10.10.101",
+  "total_devices_found": 0,
+  "devices": []
+}

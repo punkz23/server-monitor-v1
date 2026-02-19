@@ -1,0 +1,621 @@
+{% extends "monitor/base.html" %}
+
+{% block title %}CCTV Dashboard - ServerWatch{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cctv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  
+  .cctv-device {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .cctv-device:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+  
+  .device-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .device-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  
+  .device-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .status-online {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+  }
+  
+  .status-offline {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+  }
+  
+  .status-unknown {
+    background: rgba(156, 163, 175, 0.2);
+    color: var(--muted);
+  }
+  
+  .dmss-login-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  
+  .dmss-login-form {
+    display: flex !important;
+    gap: 12px;
+    align-items: end;
+  }
+  
+  .form-group {
+    flex: 1;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+  
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: var(--primary-dark);
+  }
+  
+  .btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+  
+  .dmss-status {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+  
+  .status-success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid var(--success);
+    color: var(--success);
+  }
+  
+  .status-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+  }
+</style>
+{% endblock %}
+
+<div class="page-header">
+  <h1>CCTV Dashboard</h1>
+  <p>Monitor and manage your CCTV camera system</p>
+</div>
+
+<!-- DMSS Cloud Login Section -->
+<div class="dmss-login-card">
+  <h3>DMSS Cloud Integration</h3>
+  <p>Connect to DMSS cloud service to access your P2P Benchla devices</p>
+  
+  <div id="dmss-status" class="dmss-status" style="display: none;"></div>
+  
+  <!-- Simple Test Form -->
+  <div style="background: red; color: white; padding: 20px; margin: 10px 0;">
+    <h4>TEST FORM - This should be visible!</h4>
+    <input type="text" placeholder="Test input" style="padding: 5px; margin: 5px;">
+    <button style="padding: 5px 10px;">Test Button</button>
+  </div>
+  
+  <!-- Simple Standalone DMSS Login Form -->
+  <div style="background: green; color: white; padding: 20px; margin: 10px 0;">
+    <h4>DMSS LOGIN (Standalone)</h4>
+    <form action="/cctv/dmss/login/" method="POST" style="display: block;">
+      <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+      <div style="margin: 10px 0;">
+        <label>Username:</label><br>
+        <input type="text" name="username" placeholder="DMSS Username" style="padding: 5px; width: 200px;">
+      </div>
+      <div style="margin: 10px 0;">
+        <label>Password:</label><br>
+        <input type="password" name="password" placeholder="Password" style="padding: 5px; width: 200px;">
+      </div>
+      <button type="submit" style="padding: 10px 20px; background: blue; color: white;">Login to DMSS</button>
+    </form>
+  </div>
+  
+  <div id="dmss-login-form" style="display: flex !important; visibility: visible !important; opacity: 1 !important; background: yellow; padding: 20px;">
+    <h4>DMSS LOGIN FORM - This should also be visible!</h4>
+    <form class="dmss-login-form" id="dmss-form" style="display: flex !important; visibility: visible !important; opacity: 1 !important;">
+      <div class="form-group" style="display: block !important; visibility: visible !important;">
+        <label for="dmss-username" style="display: block !important;">DMSS Username</label>
+        <input type="text" id="dmss-username" name="username" placeholder="Enter DMSS username" required style="display: block !important; width: 100%; padding: 10px;">
+      </div>
+      <div class="form-group" style="display: block !important; visibility: visible !important;">
+        <label for="dmss-password" style="display: block !important;">Password</label>
+        <input type="password" id="dmss-password" name="password" placeholder="Enter password" required style="display: block !important; width: 100%; padding: 10px;">
+      </div>
+      <button type="submit" class="btn btn-primary" id="dmss-login-btn" style="display: inline-block !important; padding: 10px 20px;">Login</button>
+      <button type="button" class="btn btn-secondary" id="dmss-logout-btn" style="display: none !important;">Logout</button>
+    </form>
+  </div>
+  
+  <div id="dmss-devices-info" style="display: none; margin-top: 16px;">
+    <strong>Cloud Devices:</strong> <span id="dmss-devices-count">0</span>
+  </div>
+</div>
+    border: 1px solid var(--success);
+  }
+  
+  .status-offline {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+  
+  .status-unknown {
+    background: rgba(107, 114, 128, 0.2);
+    color: var(--unknown);
+    border: 1px solid var(--unknown);
+  }
+  
+  .device-info {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .info-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .info-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  
+  .info-value {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+  }
+  
+  .cameras-section {
+    margin-top: 20px;
+  }
+  
+  .cameras-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  
+  .cameras-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .camera-item {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  
+  .camera-item:hover {
+    background: var(--hover-bg);
+  }
+  
+  .camera-number {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  
+  .camera-name {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  
+  .device-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  
+  .btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .btn-primary:hover {
+    background: var(--accent-hover);
+  }
+  
+  .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .btn-secondary:hover {
+    background: var(--hover-bg);
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  
+  .stat-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+  
+  .import-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  
+  .xml-textarea {
+    width: 100%;
+    min-height: 200px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    resize: vertical;
+  }
+  
+  .xml-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  
+  .camera-preview {
+    width: 100%;
+    height: 120px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 16px;
+  }
+</style>
+
+{% block extra_js %}
+<script>
+document.getElementById('import-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const xmlContent = document.getElementById('xml-content').value;
+  const resultDiv = document.getElementById('import-result');
+  
+  fetch('{% url "import_cctv_xml" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: 'xml_content=' + encodeURIComponent(xmlContent)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      resultDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      resultDiv.innerHTML = '<div class="alert alert-danger">' + data.error + '</div>';
+    }
+  })
+  .catch(error => {
+    resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error.message + '</div>';
+  });
+});
+
+document.getElementById('clear-btn').addEventListener('click', function() {
+  document.getElementById('xml-content').value = '';
+  document.getElementById('import-result').innerHTML = '';
+});
+
+// DMSS Cloud Integration
+document.addEventListener('DOMContentLoaded', function() {
+  // Temporarily disable status check to ensure form is visible
+  // checkDMSSStatus();
+  
+  // DMSS Login Form
+  document.getElementById('dmss-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    dmssLogin();
+  });
+  
+  // DMSS Logout
+  document.getElementById('dmss-logout-btn').addEventListener('click', function() {
+    dmssLogout();
+  });
+});
+
+function checkDMSSStatus() {
+  fetch('/cctv/dmss/status/')
+    .then(response => response.json())
+    .then(data => {
+      if (data.logged_in) {
+        showDMSSLoggedIn(data);
+      } else {
+        showDMSSLoggedOut();
+      }
+    })
+    .catch(error => {
+      console.error('DMSS status check error:', error);
+      showDMSSLoggedOut();
+    });
+}
+
+function dmssLogin() {
+  const username = document.getElementById('dmss-username').value;
+  const password = document.getElementById('dmss-password').value;
+  
+  if (!username || !password) {
+    showDMSSStatus('Please enter username and password', 'error');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('password', password);
+  
+  fetch('/cctv/dmss/login/', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showDMSSStatus(data.message, 'success');
+      // Check status again to update UI
+      setTimeout(checkDMSSStatus, 1000);
+    } else {
+      showDMSSStatus(data.error || 'Login failed', 'error');
+    }
+  })
+  .catch(error => {
+    showDMSSStatus('Login error: ' + error.message, 'error');
+  });
+}
+
+function dmssLogout() {
+  fetch('/cctv/dmss/logout/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showDMSSStatus(data.message, 'success');
+      showDMSSLoggedOut();
+    } else {
+      showDMSSStatus(data.error || 'Logout failed', 'error');
+    }
+  })
+  .catch(error => {
+    showDMSSStatus('Logout error: ' + error.message, 'error');
+  });
+}
+
+function showDMSSStatus(message, type) {
+  const statusDiv = document.getElementById('dmss-status');
+  statusDiv.textContent = message;
+  statusDiv.className = 'dmss-status status-' + type;
+  statusDiv.style.display = 'block';
+  
+  // Auto-hide after 5 seconds
+  setTimeout(() => {
+    statusDiv.style.display = 'none';
+  }, 5000);
+}
+
+function showDMSSLoggedIn(data) {
+  document.getElementById('dmss-login-form').style.display = 'none';
+  document.getElementById('dmss-logout-btn').style.display = 'inline-block';
+  document.getElementById('dmss-devices-info').style.display = 'block';
+  document.getElementById('dmss-devices-count').textContent = data.devices_count || 0;
+  
+  showDMSSStatus(`Logged in as ${data.username}. Connected to ${data.devices_count} devices.`, 'success');
+}
+
+function showDMSSLoggedOut() {
+  document.getElementById('dmss-login-form').style.display = 'flex';
+  document.getElementById('dmss-logout-btn').style.display = 'none';
+  document.getElementById('dmss-devices-info').style.display = 'none';
+}
+
+function viewCamera(deviceId, cameraNumber) {
+  window.open(`{% url 'cctv_camera_detail' 0 0 %}`.replace('0', deviceId).replace('0', cameraNumber), '_blank');
+}
+
+function viewAllCameras(deviceId) {
+  window.open(`{% url 'cctv_device_detail' 0 %}`.replace('0', deviceId), '_blank');
+}
+
+function checkStatus(deviceId) {
+  const button = event.target;
+  const originalText = button.textContent;
+  button.textContent = 'Checking...';
+  button.disabled = true;
+  
+  fetch('{% url "check_cctv_status" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: 'device_id=' + encodeURIComponent(deviceId)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Update the device status display
+      const deviceCard = button.closest('.cctv-device');
+      const statusElement = deviceCard.querySelector('.device-status');
+      statusElement.className = 'device-status status-' + data.status;
+      statusElement.textContent = data.status;
+      
+      // Show success message
+      alert('Status checked: ' + data.status + '\nLast checked: ' + (data.last_checked || 'Never'));
+      
+      // Refresh the page to update statistics
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      alert('Error checking status: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error: ' + error.message);
+  })
+  .finally(() => {
+    button.textContent = originalText;
+    button.disabled = false;
+  });
+}
+
+function checkAllStatuses() {
+  const buttons = document.querySelectorAll('.btn-secondary');
+  buttons.forEach(btn => {
+    if (btn.textContent === 'Check Status') {
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
+    }
+  });
+  
+  fetch('{% url "check_all_cctv_status" %}')
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('All devices checked successfully!\n' + 
+            data.results.map(r => r.name + ': ' + r.status).join('\n'));
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      alert('Error checking all statuses: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Error: ' + error.message);
+  })
+  .finally(() => {
+    buttons.forEach(btn => {
+      if (btn.textContent === 'Checking...') {
+        btn.disabled = false;
+        btn.textContent = 'Check Status';
+      }
+    });
+  });
+}
+
+function editDevice(deviceId) {
+  alert('Device edit will be implemented here. Device ID: ' + deviceId);
+}
+</script>
+{% endblock %}
