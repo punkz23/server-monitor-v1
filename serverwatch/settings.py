@@ -22,6 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-31g8r+yrqm&h@0v(t&xuw*63+$###w48u2hyjtqkw@dz+#-n3w'
 
+ENCRYPTION_KEY = 'bb9518544ef4a067dd523e5369680c6553835e5d304a08f51543dd807353f88f' # Generated using secrets.token_hex(32)
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -49,6 +51,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'monitor',
+    'projects_management',
 ]
 
 MIDDLEWARE = [

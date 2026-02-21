@@ -3,6 +3,7 @@ import 'dashboard_screen.dart';
 import 'server_list_screen.dart';
 import 'alert_history_screen.dart';
 import 'ssl_manager_screen.dart';
+import 'projects_screen.dart'; // Import the ProjectsScreen
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -19,6 +20,7 @@ class _MainScreenState extends State<MainScreen> {
     const ServerListScreen(),
     const AlertHistoryScreen(),
     const SslManagerScreen(),
+    const ProjectsScreen(), // Add ProjectsScreen to the list of screens
   ];
 
   @override
@@ -40,6 +42,7 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.dns_outlined), activeIcon: Icon(Icons.dns), label: 'Servers'),
           BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), activeIcon: Icon(Icons.notifications), label: 'Alerts'),
           BottomNavigationBarItem(icon: Icon(Icons.verified_user_outlined), activeIcon: Icon(Icons.verified_user), label: 'SSL'),
+          BottomNavigationBarItem(icon: Icon(Icons.folder_open_outlined), activeIcon: Icon(Icons.folder), label: 'Projects'), // Add new item for Projects
         ],
       ),
     );

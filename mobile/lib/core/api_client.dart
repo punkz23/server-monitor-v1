@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/project.dart'; // Import Project model
 
 class ApiClient {
   static const String _baseUrlKey = 'api_base_url';
@@ -65,4 +66,25 @@ class ApiClient {
     final token = await _storage.read(key: 'auth_token');
     return token != null;
   }
+
+  // New method to fetch projects
+  Future<List<Project>> fetchProjects() async {
+    try {
+      final response = await _dio.get('/projects/');
+      if (response.statusCode == 200) {
+        return (response.data as List).map((json) => Project.fromJson(json)).toList();
+      } else {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: 'Failed to load projects with status: ${response.statusCode}',
+        );
+      }
+    } on DioException catch (e) {
+      // Re-throw to be handled by Riverpod provider
+      throw Exception('Failed to fetch projects: ${e.message}');
+    }
+  }
 }
+

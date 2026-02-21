@@ -21,4 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('monitor.urls')),
     path('api/', include('monitor.versioned_api_urls')),  # Use versioned URLs
+    path('api/', include('projects_management.urls')), # New project management APIs
 ]
