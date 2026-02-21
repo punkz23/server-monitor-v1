@@ -24,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final client = ref.read(apiClientProvider);
+      final client = ref.read(apiClientProvider).value!;
       final response = await client.dio.post('/auth/login/', data: {
         'username': _usernameController.text,
         'password': _passwordController.text,
