@@ -30,14 +30,18 @@ class ServerWatchApp extends ConsumerWidget {
         ),
         useMaterial3: true,
       ),
-      home: FutureBuilder<bool>(
-        future: ref.read(apiClientProvider).hasToken(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          return snapshot.data == true ? const MainScreen() : const LoginScreen();
-        },
+      home: ref.watch(apiClientProvider).when(
+        data: (apiClient) => FutureBuilder<bool>(
+          future: apiClient.hasToken(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            }
+            return snapshot.data == true ? const MainScreen() : const LoginScreen();
+          },
+        ),
+        loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+        error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
       ),
     );
   }

@@ -34,3 +34,4 @@ test_ssl_alerts.py
 update_server_ssl_paths.py
 status_update.log
 get-pip.py
+*.apk
