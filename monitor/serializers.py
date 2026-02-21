@@ -156,7 +156,9 @@ class ServerStatusSerializer(serializers.ModelSerializer):
             'last_http_ok', 'last_latency_ms', 'last_http_status_code',
             'last_checked', 'last_error', 'last_resource_checked',
             'last_cpu_percent', 'last_ram_percent', 'last_load_1',
-            'last_uptime_seconds', 'last_boot_time'
+            'last_uptime_seconds', 'last_boot_time',
+            'watch_directory', 'latest_folder_name', 'latest_folder_files',
+            'latest_folder_size_mb', 'latest_folder_created'
         ]
 
 

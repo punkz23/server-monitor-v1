@@ -83,7 +83,11 @@ def agent_heartbeat(request):
         return JsonResponse({
             'status': 'success',
             'server_id': server.id,
-            'timestamp': timezone.now().isoformat()
+            'timestamp': timezone.now().isoformat(),
+            'config': {
+                'watch_directory': server.watch_directory,
+                'monitored_directories': server.monitored_directories.split(',') if server.monitored_directories else []
+            }
         })
         
     except json.JSONDecodeError:
@@ -122,6 +126,7 @@ def agent_metrics(request):
         disk_data = data.get('disk', {})
         network_data = data.get('network', {})
         system_data = data.get('system', {})
+        dir_watch_data = data.get('directory_watch', {})
         
         # Update server with latest metrics
         server.last_cpu_percent = cpu_data.get('percent')
@@ -132,6 +137,21 @@ def agent_metrics(request):
         server.last_status = 'UP'  # Agent is sending metrics, so server is UP
         server.last_checked = timezone.now() # Update last_checked for dashboard consistency
         
+        # Update directory watch info if provided
+        if dir_watch_data and dir_watch_data.get('status') == 'ok':
+            server.latest_folder_name = dir_watch_data.get('newest_folder_name')
+            server.latest_folder_size_mb = dir_watch_data.get('newest_folder_size_mb')
+            server.latest_folder_files = dir_watch_data.get('newest_folder_file_count')
+            
+            created_str = dir_watch_data.get('newest_folder_last_modified')
+            if created_str:
+                try:
+                    server.latest_folder_created = timezone.datetime.fromisoformat(created_str)
+                    if timezone.is_naive(server.latest_folder_created):
+                        server.latest_folder_created = timezone.make_aware(server.latest_folder_created)
+                except (ValueError, TypeError):
+                    pass
+
         # Update disk usage percentage
         if disk_data.get('percent') is not None:
             server.last_disk_percent = disk_data.get('percent')
@@ -141,7 +161,8 @@ def agent_metrics(request):
         server.save(update_fields=[
             'last_cpu_percent', 'last_ram_percent', 'last_load_1',
             'last_uptime_seconds', 'last_disk_percent', 'last_agent_metrics',
-            'updated_at'
+            'latest_folder_name', 'latest_folder_size_mb', 'latest_folder_files',
+            'latest_folder_created', 'updated_at'
         ])
         
         # Broadcast metrics update
@@ -197,7 +218,11 @@ def agent_metrics(request):
         return JsonResponse({
             'status': 'success',
             'server_id': server.id,
-            'timestamp': timezone.now().isoformat()
+            'timestamp': timezone.now().isoformat(),
+            'config': {
+                'watch_directory': server.watch_directory,
+                'monitored_directories': server.monitored_directories.split(',') if server.monitored_directories else []
+            }
         })
         
     except json.JSONDecodeError:

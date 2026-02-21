@@ -450,6 +450,7 @@ class ServerAgent:
             "retry_attempts": 3,
             "retry_delay": 5,
             "monitored_directories": [],
+            "watch_directory": "",
             "directory_timeout": 30
         }
         
@@ -625,6 +626,15 @@ class ServerAgent:
                     directory_metrics.append(dir_metrics)
             metrics["directory_metrics"] = directory_metrics
 
+            # 7.1 Directory Watch (Newest folder in specific directory)
+            if self.config.get("watch_directory"):
+                metrics["directory_watch"] = self.get_directory_metrics(
+                    self.config["watch_directory"], 
+                    timeout=self.config.get("directory_timeout", 30)
+                )
+            else:
+                metrics["directory_watch"] = None
+
             # 8. SSL Metrics
             ssl_certs = self.discover_ssl_certificates()
             metrics["ssl_metrics"] = self.get_ssl_metrics(ssl_certs)
@@ -739,6 +749,7 @@ class ServerAgent:
             "newest_folder_name": None,
             "newest_folder_size_mb": None,
             "newest_folder_last_modified": None,
+            "newest_folder_file_count": 0,
             "status": "error",
             "error": "Unknown error"
         }
@@ -751,17 +762,19 @@ class ServerAgent:
             result["error"] = "Not a directory"
             return result
 
-        # Find the most recently modified subdirectory
+        # Find the most recently created subdirectory
         newest_subdir = None
-        newest_mtime = 0
+        newest_ctime = 0
         
         try:
             for entry in os.listdir(path):
                 full_path = os.path.join(path, entry)
                 if os.path.isdir(full_path):
-                    mtime = os.path.getmtime(full_path)
-                    if mtime > newest_mtime:
-                        newest_mtime = mtime
+                    # Use ctime for "creation time" or "metadata change time" 
+                    # On Linux, ctime is often used as creation time if the FS supports it
+                    ctime = os.path.getctime(full_path)
+                    if ctime > newest_ctime:
+                        newest_ctime = ctime
                         newest_subdir = full_path
         except Exception as e:
             result["error"] = f"Error finding newest subdirectory: {str(e)}"
@@ -795,11 +808,20 @@ class ServerAgent:
             self.logger.error(f"Error in get_directory_metrics (du -sm) for {path}: {e}")
             return result
 
-        # Get last modified time of the newest subdirectory
+        # Count files in the newest subdirectory
         try:
-            result["newest_folder_last_modified"] = datetime.fromtimestamp(newest_mtime).isoformat()
+            file_count = 0
+            for root, dirs, files in os.walk(newest_subdir):
+                file_count += len(files)
+            result["newest_folder_file_count"] = file_count
+        except Exception as e:
+            self.logger.warning(f"Error counting files in {newest_subdir}: {e}")
+
+        # Get creation time of the newest subdirectory
+        try:
+            result["newest_folder_last_modified"] = datetime.fromtimestamp(newest_ctime).isoformat()
         except Exception:
-            result["newest_folder_last_modified"] = None # Should not happen if newest_mtime is set
+            result["newest_folder_last_modified"] = None
 
         result["status"] = "ok"
         result["error"] = None
@@ -854,8 +876,34 @@ class ServerAgent:
         if success:
             self.logger.debug("Heartbeat sent successfully")
             self.last_heartbeat_time = time.time()
+            # Update dynamic configuration from server
+            if response and "config" in response:
+                self.update_dynamic_config(response["config"])
         else:
             self.logger.error("Heartbeat failed after retries")
+
+    def update_dynamic_config(self, new_config):
+        """Update agent configuration with settings from the server"""
+        if not new_config:
+            return
+            
+        changed = False
+        if "watch_directory" in new_config and new_config["watch_directory"] != self.config.get("watch_directory"):
+            self.logger.info(f"Updating watch_directory to: {new_config['watch_directory']}")
+            self.config["watch_directory"] = new_config["watch_directory"]
+            changed = True
+            
+        if "monitored_directories" in new_config:
+            # Only update if they are actually different
+            if set(new_config["monitored_directories"]) != set(self.config.get("monitored_directories", [])):
+                self.logger.info(f"Updating monitored_directories to: {new_config['monitored_directories']}")
+                self.config["monitored_directories"] = new_config["monitored_directories"]
+                changed = True
+        
+        if changed:
+            # Optionally save back to local config file if you want persistence across restarts
+            # For now, we'll just keep it in memory for the running instance
+            pass
     
     def send_metrics(self, metrics):
         """Send metrics to server"""
@@ -868,6 +916,9 @@ class ServerAgent:
         if success:
             self.logger.debug("Metrics sent successfully")
             self.last_metrics_time = time.time()
+            # Update dynamic configuration from server
+            if response and "config" in response:
+                self.update_dynamic_config(response["config"])
         else:
             self.logger.error("Metrics send failed after retries")
     
