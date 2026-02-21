@@ -1,0 +1,16 @@
+[Unit]
+Description=ServerWatch Django Backend
+After=network.target
+
+[Service]
+Type=simple
+User=ic1
+WorkingDirectory=/home/ic1/projects/server-monitor-v1
+ExecStart=/home/ic1/projects/server-monitor-v1/.venv_linux/bin/python3 manage.py runserver 0.0.0.0:8001
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

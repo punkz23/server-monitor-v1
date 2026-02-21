@@ -7,6 +7,7 @@ final sslCertificatesProvider = FutureProvider<List<SslCertificate>>((ref) async
   final client = ref.watch(apiClientProvider);
   final response = await client.dio.get('/certificates/');
   
-  final List<dynamic> data = response.data;
+  // DRF with pagination returns a map with a 'results' key containing the list
+  final List<dynamic> data = response.data is Map ? response.data['results'] : response.data;
   return data.map((s) => SslCertificate.fromJson(s)).toList();
 });

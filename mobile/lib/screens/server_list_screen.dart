@@ -86,10 +86,14 @@ class _ServerListScreenState extends ConsumerState<ServerListScreen> {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              server.name,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            Flexible(
+              child: Text(
+                server.name,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             if (server.pinned)
               const Padding(
@@ -104,15 +108,18 @@ class _ServerListScreenState extends ConsumerState<ServerListScreen> {
             const SizedBox(height: 4),
             Text(server.ipAddress, style: const TextStyle(color: Colors.white38, fontSize: 13)),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildMiniMetric(Icons.speed, '${server.cpuPercent?.toStringAsFixed(0) ?? '-'}%'),
-                const SizedBox(width: 12),
-                _buildMiniMetric(Icons.memory, '${server.ramPercent?.toStringAsFixed(0) ?? '-'}%'),
-                const SizedBox(width: 12),
-                if (server.latencyMs != null)
-                  _buildMiniMetric(Icons.timer, '${server.latencyMs}ms'),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildMiniMetric(Icons.speed, '${server.cpuPercent?.toStringAsFixed(0) ?? '-'}%'),
+                  const SizedBox(width: 12),
+                  _buildMiniMetric(Icons.memory, '${server.ramPercent?.toStringAsFixed(0) ?? '-'}%'),
+                  const SizedBox(width: 12),
+                  if (server.latencyMs != null)
+                    _buildMiniMetric(Icons.timer, '${server.latencyMs}ms'),
+                ],
+              ),
             )
           ],
         ),
