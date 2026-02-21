@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
 import '../providers/project_provider.dart'; // For refreshing projects if needed
 import '../core/api_client.dart'; // For API calls
+import '../providers/dashboard_provider.dart'; // Import for apiClientProvider
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final Project project;
@@ -32,12 +33,11 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
 
     setState(() {
       _isLoading = true;
-      _commandOutput = 'Initiating Git pull...
-';
+      _commandOutput = '''Initiating Git pull...\n''';
     });
 
     try {
-      final apiClient = await ref.read(apiClientProvider.future);
+      final apiClient = ref.read(apiClientProvider).value!; // Use .value! for sync access after future is resolved by Riverpod
       final serverIds = _selectedServers.map((s) => s.id).toList();
       final response = await apiClient.dio.post(
         '/projects/${widget.project.id}/git-pull/',
@@ -47,31 +47,26 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
       _commandOutput = ''; // Clear previous output
       if (response.statusCode == 200) {
         for (var result in response.data) {
-          _commandOutput += 'Server: ${result['hostname']} (ID: ${result['server_id']})
-';
-          _commandOutput += 'Status: ${result['success'] ? 'SUCCESS' : 'FAILED'}
-';
+          _commandOutput += '''Server: ${result['hostname']} (ID: ${result['server_id']})
+Status: ${result['success'] ? 'SUCCESS' : 'FAILED'}
+''';
           if (result['stdout'].isNotEmpty) {
-            _commandOutput += 'STDOUT:
+            _commandOutput += '''STDOUT:
 ${result['stdout']}
-';
+''';
           }
           if (result['stderr'].isNotEmpty) {
-            _commandOutput += 'STDERR:
+            _commandOutput += '''STDERR:
 ${result['stderr']}
-';
+''';
           }
-          _commandOutput += 'Exit Code: ${result['exit_code']}
-
-';
+          _commandOutput += '''Exit Code: ${result['exit_code']}\n\n''';
         }
       } else {
-        _commandOutput = 'Error: ${response.statusCode} - ${response.data}
-';
+        _commandOutput = '''Error: ${response.statusCode} - ${response.data}\n''';
       }
     } catch (e) {
-      _commandOutput = 'Error running Git pull: $e
-';
+      _commandOutput = '''Error running Git pull: $e\n''';
     } finally {
       setState(() {
         _isLoading = false;
@@ -121,12 +116,11 @@ ${result['stderr']}
 
     setState(() {
       _isLoading = true;
-      _commandOutput = 'Executing custom command: "$command"...
-';
+      _commandOutput = '''Executing custom command: "$command"...\n''';
     });
 
     try {
-      final apiClient = await ref.read(apiClientProvider.future);
+      final apiClient = ref.read(apiClientProvider).value!; // Use .value! for sync access after future is resolved by Riverpod
       final serverIds = _selectedServers.map((s) => s.id).toList();
       final response = await apiClient.dio.post(
         '/projects/${widget.project.id}/run-command/',
@@ -136,31 +130,26 @@ ${result['stderr']}
       _commandOutput = ''; // Clear previous output
       if (response.statusCode == 200) {
         for (var result in response.data) {
-          _commandOutput += 'Server: ${result['hostname']} (ID: ${result['server_id']})
-';
-          _commandOutput += 'Status: ${result['success'] ? 'SUCCESS' : 'FAILED'}
-';
+          _commandOutput += '''Server: ${result['hostname']} (ID: ${result['server_id']})
+Status: ${result['success'] ? 'SUCCESS' : 'FAILED'}
+''';
           if (result['stdout'].isNotEmpty) {
-            _commandOutput += 'STDOUT:
+            _commandOutput += '''STDOUT:
 ${result['stdout']}
-';
+''';
           }
           if (result['stderr'].isNotEmpty) {
-            _commandOutput += 'STDERR:
+            _commandOutput += '''STDERR:
 ${result['stderr']}
-';
+''';
           }
-          _commandOutput += 'Exit Code: ${result['exit_code']}
-
-';
+          _commandOutput += '''Exit Code: ${result['exit_code']}\n\n''';
         }
       } else {
-        _commandOutput = 'Error: ${response.statusCode} - ${response.data}
-';
+        _commandOutput = '''Error: ${response.statusCode} - ${response.data}\n''';
       }
     } catch (e) {
-      _commandOutput = 'Error running custom command: $e
-';
+      _commandOutput = '''Error running custom command: $e\n''';
     } finally {
       setState(() {
         _isLoading = false;
