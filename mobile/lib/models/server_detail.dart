@@ -9,6 +9,13 @@ class ServerDetail {
   final List<dynamic> directoryWatch;
   final List<ServiceStatus> services;
 
+  // New Directory Watch Fields
+  final String? watchDirectory;
+  final String? latestFolderName;
+  final int? latestFolderFiles;
+  final int? latestFolderSizeMb;
+  final DateTime? latestFolderCreated;
+
   ServerDetail({
     required this.id,
     required this.name,
@@ -19,15 +26,21 @@ class ServerDetail {
     required this.ssl,
     required this.directoryWatch,
     required this.services,
+    this.watchDirectory,
+    this.latestFolderName,
+    this.latestFolderFiles,
+    this.latestFolderSizeMb,
+    this.latestFolderCreated,
   });
 
   factory ServerDetail.fromJson(Map<String, dynamic> json) {
     final historical = json['historical'] as Map<String, dynamic>? ?? {};
+    final server = json['server'] as Map<String, dynamic>? ?? {};
     
     return ServerDetail(
-      id: json['server_id'] ?? 0,
-      name: json['server_name'] ?? '',
-      ipAddress: json['ip_address'] ?? '',
+      id: json['server_id'] ?? server['id'] ?? 0,
+      name: json['server_name'] ?? server['name'] ?? '',
+      ipAddress: json['ip_address'] ?? server['ip_address'] ?? '',
       metrics: json['metrics'] ?? {},
       historicalCpu: _parsePoints(historical['cpu']),
       historicalRam: _parsePoints(historical['ram']),
@@ -36,6 +49,13 @@ class ServerDetail {
       services: (json['services'] as List? ?? [])
           .map((s) => ServiceStatus.fromJson(s))
           .toList(),
+      watchDirectory: server['watch_directory'],
+      latestFolderName: server['latest_folder_name'],
+      latestFolderFiles: server['latest_folder_files'],
+      latestFolderSizeMb: server['latest_folder_size_mb'],
+      latestFolderCreated: server['latest_folder_created'] != null 
+          ? DateTime.parse(server['latest_folder_created']) 
+          : null,
     );
   }
 

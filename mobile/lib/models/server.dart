@@ -15,6 +15,13 @@ class Server {
   final int? latencyMs;
   final DateTime? lastChecked;
 
+  // Directory Watch fields
+  final String? watchDirectory;
+  final String? latestFolderName;
+  final int? latestFolderFiles;
+  final int? latestFolderSizeMb;
+  final DateTime? latestFolderCreated;
+
   Server({
     required this.id,
     required this.name,
@@ -31,6 +38,11 @@ class Server {
     this.ramPercent,
     this.latencyMs,
     this.lastChecked,
+    this.watchDirectory,
+    this.latestFolderName,
+    this.latestFolderFiles,
+    this.latestFolderSizeMb,
+    this.latestFolderCreated,
   });
 
   factory Server.fromJson(Map<String, dynamic> json) {
@@ -50,6 +62,11 @@ class Server {
       ramPercent: _toDouble(json['last_ram_percent']),
       latencyMs: json['last_latency_ms'],
       lastChecked: json['last_checked'] != null ? DateTime.parse(json['last_checked']) : null,
+      watchDirectory: json['watch_directory'],
+      latestFolderName: json['latest_folder_name'],
+      latestFolderFiles: json['latest_folder_files'],
+      latestFolderSizeMb: json['latest_folder_size_mb'],
+      latestFolderCreated: json['latest_folder_created'] != null ? DateTime.parse(json['latest_folder_created']) : null,
     );
   }
 

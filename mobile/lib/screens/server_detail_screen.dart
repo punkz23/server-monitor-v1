@@ -40,6 +40,10 @@ class ServerDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _buildChartSection('RAM Usage (%)', detail.historicalRam, Colors.purple),
                 const SizedBox(height: 24),
+                if (detail.watchDirectory != null && detail.watchDirectory!.isNotEmpty) ...[
+                  _buildDirectoryWatchSection(detail),
+                  const SizedBox(height: 24),
+                ],
                 _buildServiceStatus(detail.services),
                 const SizedBox(height: 24),
                 if (detail.ssl.isNotEmpty) ...[
@@ -203,5 +207,76 @@ class ServerDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildDirectoryWatchSection(ServerDetail detail) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Directory Watch'),
+        const SizedBox(height: 4),
+        Text('Monitoring: ${detail.watchDirectory}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF181929),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.blue.withOpacity(0.2)),
+          ),
+          child: detail.latestFolderName == null
+              ? const Center(child: Text('No folders detected yet', style: TextStyle(color: Colors.white24)))
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.folder_open, color: Colors.blue, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            detail.latestFolderName!,
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _buildDirStat('Files', '${detail.latestFolderFiles ?? 0}'),
+                        _buildDirStat('Size', '${detail.latestFolderSizeMb ?? 0} MB'),
+                        _buildDirStat('Created', _formatDate(detail.latestFolderCreated)),
+                      ],
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDirStat(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Unknown';
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    if (difference.inDays > 7) {
+      return DateFormat('MMM dd, yyyy').format(date);
+    }
+    return '${difference.inDays}d ago'; // Simple fallback or use timeago if imported correctly
   }
 }

@@ -396,6 +396,18 @@ class Server(models.Model):
         help_text="Comma-separated list of directories to monitor"
     )
 
+    # Directory Watch Feature
+    watch_directory = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Directory to watch for the latest created folder"
+    )
+    latest_folder_name = models.CharField(max_length=255, blank=True, null=True)
+    latest_folder_files = models.IntegerField(null=True, blank=True)
+    latest_folder_size_mb = models.IntegerField(null=True, blank=True)
+    latest_folder_created = models.DateTimeField(null=True, blank=True)
+
     ssl_cert_path = models.CharField(
         max_length=500,
         blank=True,
