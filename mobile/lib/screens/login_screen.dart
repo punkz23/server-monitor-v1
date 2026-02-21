@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../core/api_client.dart';
 import '../providers/dashboard_provider.dart';
 import 'main_screen.dart';
@@ -24,7 +25,12 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final client = ref.read(apiClientProvider).value!;
+      final clientAsyncValue = ref.read(apiClientProvider);
+      if (clientAsyncValue.value == null) {
+        throw Exception('API Client not initialized');
+      }
+      final client = clientAsyncValue.value!;
+      
       final response = await client.dio.post('/auth/login/', data: {
         'username': _usernameController.text,
         'password': _passwordController.text,
@@ -38,9 +44,24 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const MainScreen()),
         );
       }
+    } on DioException catch (e) {
+      setState(() {
+        if (e.type == DioExceptionType.connectionTimeout || 
+            e.type == DioExceptionType.receiveTimeout) {
+          _error = 'Connection timed out. Check your server IP.';
+        } else if (e.type == DioExceptionType.connectionError) {
+          _error = 'Connection refused. Is the server running?';
+        } else if (e.response?.statusCode == 401) {
+          _error = 'Invalid username or password.';
+        } else if (e.response?.statusCode == 404) {
+          _error = 'Login endpoint not found (404).';
+        } else {
+          _error = 'Error: ${e.message}';
+        }
+      });
     } catch (e) {
       setState(() {
-        _error = 'Login failed. Please check your credentials.';
+        _error = 'Login failed: ${e.toString()}';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
