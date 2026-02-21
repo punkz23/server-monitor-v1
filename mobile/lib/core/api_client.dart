@@ -31,7 +31,15 @@ class ApiClient {
 
   static Future<ApiClient> create() async {
     final prefs = await SharedPreferences.getInstance();
+    // For now, prioritize the hardcoded default to ensure it works with the current server IP
     final baseUrl = prefs.getString(_baseUrlKey) ?? _defaultBaseUrl;
+    
+    // Safety check: if the saved URL is different from current default, log it or force update
+    // In this case, we'll force the default if it looks like a local/old IP
+    if (baseUrl.contains('127.0.0.1') || baseUrl.contains('localhost')) {
+      return ApiClient._internal(_defaultBaseUrl);
+    }
+    
     return ApiClient._internal(baseUrl);
   }
 
