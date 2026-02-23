@@ -20,6 +20,28 @@ class ServerAdmin(admin.ModelAdmin):
     )
     list_filter = ("enabled", "use_https", "http_check", "last_status")
     search_fields = ("name", "ip_address")
+    fieldsets = (
+        ("Basic Info", {"fields": ("name", "server_type", "ip_address", "port", "enabled", "pinned", "tags")}),
+        ("Checks", {"fields": ("use_https", "path", "http_check", "skip_ssl_verification")}),
+        ("Agent Info", {"fields": ("agent_status", "agent_version", "agent_token", "last_agent_heartbeat", "last_agent_metrics")}),
+        ("Directory Watch", {"fields": ("watch_directory", "latest_folder_name", "latest_folder_files", "latest_folder_size_mb", "latest_folder_created")}),
+        ("Remote Monitoring", {"fields": ("monitored_directories", "ssl_cert_path")}),
+        ("Last Metrics", {
+            "fields": (
+                "last_status", "last_checked", "last_latency_ms", "last_http_status_code", 
+                "last_cpu_percent", "last_ram_percent", "last_disk_percent", "last_load_1",
+                "last_uptime_seconds", "last_boot_time"
+            ),
+            "classes": ("collapse",),
+        }),
+    )
+    readonly_fields = (
+        "agent_token", "last_agent_heartbeat", "last_agent_metrics",
+        "latest_folder_name", "latest_folder_files", "latest_folder_size_mb", "latest_folder_created",
+        "last_status", "last_checked", "last_latency_ms", "last_http_status_code",
+        "last_cpu_percent", "last_ram_percent", "last_disk_percent", "last_load_1",
+        "last_uptime_seconds", "last_boot_time"
+    )
 
 
 @admin.register(CheckResult)

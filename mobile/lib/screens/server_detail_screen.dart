@@ -40,7 +40,12 @@ class ServerDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _buildChartSection('RAM Usage (%)', detail.historicalRam, Colors.purple),
                 const SizedBox(height: 24),
-                if (detail.watchDirectory != null && detail.watchDirectory!.isNotEmpty) ...[
+                if (detail.directoryWatch.isNotEmpty) ...[
+                  _buildSectionTitle('Directory Watch'),
+                  const SizedBox(height: 12),
+                  ...detail.directoryWatch.map((dw) => _buildDirectoryWatchCard(dw)),
+                  const SizedBox(height: 24),
+                ] else if (detail.watchDirectory != null && detail.watchDirectory!.isNotEmpty) ...[
                   _buildDirectoryWatchSection(detail),
                   const SizedBox(height: 24),
                 ],
@@ -204,6 +209,59 @@ class ServerDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text('Issuer: ${ssl['issuer'] ?? 'Unknown'}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDirectoryWatchCard(dynamic dwData) {
+    // Check if it's a Map or already parsed (it's dynamic in model)
+    final dw = dwData is Map ? dwData : {};
+    final path = dw['path'] ?? 'Unknown Path';
+    final folderName = dw['newest_folder_name'];
+    final folderSize = dw['newest_folder_size_mb'];
+    final lastModifiedStr = dw['newest_folder_last_modified'];
+    final lastModified = lastModifiedStr != null ? DateTime.parse(lastModifiedStr) : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF181929),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Path: $path', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+          const SizedBox(height: 8),
+          folderName == null
+              ? const Text('No folders detected', style: TextStyle(color: Colors.white24, fontSize: 14))
+              : Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.folder_open, color: Colors.blue, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            folderName,
+                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _buildDirStat('Size', '${folderSize ?? 0} MB'),
+                        _buildDirStat('Created', _formatDate(lastModified)),
+                      ],
+                    ),
+                  ],
+                ),
         ],
       ),
     );
