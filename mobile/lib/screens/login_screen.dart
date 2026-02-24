@@ -98,7 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> { // Changed to Consu
         title: const Text('Edit API Base URL'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintHintText: 'http://192.168.1.1:8000/api'),
+          decoration: const InputDecoration(hintText: 'http://192.168.1.1:8000/api'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
