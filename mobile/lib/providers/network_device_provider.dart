@@ -14,22 +14,31 @@ class NetworkDeviceNotifier extends StateNotifier<AsyncValue<dynamic>> {
   final Ref ref;
   NetworkDeviceNotifier(this.ref) : super(const AsyncValue.data(null));
 
-  Future<void> triggerScan() async {
+  Future<bool> triggerScan() async {
     state = const AsyncValue.loading();
     try {
       final client = ref.read(apiClientProvider).value!;
       await client.dio.post('/mobile/network-devices/scan/');
       
-      // Wait a few seconds for the server-side scan to make some progress
-      await Future.delayed(const Duration(seconds: 5));
-      
-      // Refresh the list
-      ref.invalidate(networkDevicesProvider);
-      
       state = const AsyncValue.data(null);
+      
+      // We don't wait 5s here anymore, we'll let the UI handle the immediate feedback
+      // and the user can refresh later or we can do a background refresh.
+      // But for now, returning true so UI can show snackbar.
+      
+      // Auto-refresh once after 5s anyway
+      _backgroundRefresh(5);
+      
+      return true;
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
+      return false;
     }
+  }
+
+  void _backgroundRefresh(int seconds) async {
+    await Future.delayed(Duration(seconds: seconds));
+    ref.invalidate(networkDevicesProvider);
   }
 
   Future<bool> addDevice(String name, String ipAddress, String type) async {

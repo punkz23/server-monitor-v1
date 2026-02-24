@@ -170,37 +170,55 @@ def mobile_trigger_network_scan(request):
     """
     from .services.network_scanner import NetworkScanner
     import threading
+    from django.db import connection
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     def run_scan_background():
-        scanner = NetworkScanner(timeout=2, max_threads=30)
-        networks = scanner.get_local_networks()
-        
-        # Include the primary network if not detected
-        if "192.168.253.0/24" not in networks:
-            networks.insert(0, "192.168.253.0/24")
-        
-        for network in networks:
-            try:
-                all_discovered = scanner.scan_network(network)
-                # Update database with discovered devices
-                for dev_info in all_discovered:
-                    try:
-                        NetworkDevice.objects.update_or_create(
-                            ip_address=dev_info['ip_address'],
-                            defaults={
-                                'name': dev_info.get('hostname') or f"Device-{dev_info['ip_address']}",
-                                'mac_address': dev_info.get('mac_address'),
-                                'vendor': dev_info.get('vendor', 'Unknown'),
-                                'device_type': dev_info.get('device_type', NetworkDevice.TYPE_UNKNOWN),
-                                'is_active': True,
-                                'last_seen': timezone.now(),
-                                'auto_discovered': True
-                            }
-                        )
-                    except Exception as e:
-                        print(f"Error saving device {dev_info.get('ip_address')}: {e}")
-            except Exception as e:
-                print(f"Error scanning {network}: {e}")
+        try:
+            logger.info("Starting background network scan...")
+            scanner = NetworkScanner(timeout=2, max_threads=30)
+            networks = scanner.get_local_networks()
+            
+            # Include the primary network if not detected
+            if "192.168.253.0/24" not in networks:
+                networks.insert(0, "192.168.253.0/24")
+            
+            total_discovered = 0
+            for network in networks:
+                try:
+                    logger.info(f"Scanning network: {network}")
+                    discovered = scanner.scan_network(network)
+                    logger.info(f"Found {len(discovered)} devices in {network}")
+                    
+                    # Update database with discovered devices
+                    for dev_info in discovered:
+                        try:
+                            NetworkDevice.objects.update_or_create(
+                                ip_address=dev_info['ip_address'],
+                                defaults={
+                                    'name': dev_info.get('hostname') or f"Device-{dev_info['ip_address']}",
+                                    'mac_address': dev_info.get('mac_address'),
+                                    'vendor': dev_info.get('vendor', 'Unknown'),
+                                    'device_type': dev_info.get('device_type', NetworkDevice.TYPE_UNKNOWN),
+                                    'is_active': True,
+                                    'last_seen': timezone.now(),
+                                    'auto_discovered': True
+                                }
+                            )
+                            total_discovered += 1
+                        except Exception as e:
+                            logger.error(f"Error saving device {dev_info.get('ip_address')}: {e}")
+                except Exception as e:
+                    logger.error(f"Error scanning {network}: {e}")
+            
+            logger.info(f"Background scan completed. Total devices discovered/updated: {total_discovered}")
+        except Exception as e:
+            logger.error(f"Critical error in background scan: {e}")
+        finally:
+            # Close the connection in this thread
+            connection.close()
 
     # Start scan in a background thread on the server
     thread = threading.Thread(target=run_scan_background)

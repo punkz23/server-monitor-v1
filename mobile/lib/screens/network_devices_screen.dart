@@ -187,7 +187,17 @@ class NetworkDevicesScreen extends ConsumerWidget {
             ),
           ),
           ElevatedButton.icon(
-            onPressed: isScanning ? null : () => ref.read(networkDeviceActionProvider.notifier).triggerScan(),
+            onPressed: isScanning ? null : () async {
+              final success = await ref.read(networkDeviceActionProvider.notifier).triggerScan();
+              if (success && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Server-side scan initiated. Devices will appear shortly.'),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
             icon: isScanning
                 ? const SizedBox(
                     width: 16,
