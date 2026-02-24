@@ -8,7 +8,8 @@ from .api_views import (
     mobile_server_status, mobile_network_devices, mobile_server_detail,
     mobile_alerts, mobile_metrics_history, mobile_agent_ingest,
     mobile_dashboard_summary, check_certificate, check_all_certificates,
-    certificate_status_summary, add_certificate_from_info
+    certificate_status_summary, add_certificate_from_info,
+    mobile_trigger_network_scan, mobile_add_network_device
 )
 from .auth_views import (
     mobile_login, mobile_logout, mobile_token_info, mobile_refresh_token,
@@ -63,6 +64,8 @@ v1_patterns = [
         path('dashboard/', mobile_dashboard_summary, name='v1-mobile-dashboard-summary'),
         path('server-status/', mobile_server_status, name='v1-mobile-server-status'),
         path('network-devices/', mobile_network_devices, name='v1-mobile-network-devices'),
+        path('network-devices/scan/', mobile_trigger_network_scan, name='v1-mobile-network-scan'),
+        path('network-devices/add/', mobile_add_network_device, name='v1-mobile-add-network-device'),
         path('server/<int:server_id>/', mobile_server_detail, name='v1-mobile-server-detail'),
         path('alerts/', mobile_alerts, name='v1-mobile-alerts'),
         path('server/<int:server_id>/metrics/', mobile_metrics_history, name='v1-mobile-metrics-history'),
@@ -88,6 +91,8 @@ v2_patterns = [
         path('dashboard/', mobile_dashboard_summary, name='v2-mobile-dashboard-summary'),
         path('server-status/', mobile_server_status, name='v2-mobile-server-status'),
         path('network-devices/', mobile_network_devices, name='v2-mobile-network-devices'),
+        path('network-devices/scan/', mobile_trigger_network_scan, name='v2-mobile-network-scan'),
+        path('network-devices/add/', mobile_add_network_device, name='v2-mobile-add-network-device'),
         path('server/<int:server_id>/', mobile_server_detail, name='v2-mobile-server-detail'),
         path('alerts/', mobile_alerts, name='v2-mobile-alerts'),
         path('server/<int:server_id>/metrics/', mobile_metrics_history, name='v2-mobile-metrics-history'),
@@ -124,6 +129,8 @@ legacy_urlpatterns = [
         path('dashboard/', mobile_dashboard_summary, name='mobile-dashboard-summary'),
         path('server-status/', mobile_server_status, name='mobile-server-status'),
         path('network-devices/', mobile_network_devices, name='mobile-network-devices'),
+        path('network-devices/scan/', mobile_trigger_network_scan, name='mobile-network-scan'),
+        path('network-devices/add/', mobile_add_network_device, name='mobile-add-network-device'),
         path('server/<int:server_id>/', mobile_server_detail, name='mobile-server-detail'),
         path('alerts/', mobile_alerts, name='mobile-alerts'),
         path('server/<int:server_id>/metrics/', mobile_metrics_history, name='mobile-metrics-history'),
