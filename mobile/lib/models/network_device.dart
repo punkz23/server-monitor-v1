@@ -36,7 +36,7 @@ class NetworkDevice {
       vendor: json['vendor'] ?? 'Unknown',
       hostname: json['hostname'],
       isActive: json['is_active'] ?? false,
-      last_seen: json['last_seen'] != null ? DateTime.parse(json['last_seen']) : null,
+      lastSeen: json['last_seen'] != null ? DateTime.parse(json['last_seen']) : null,
       enabled: json['enabled'] ?? false,
     );
   }
