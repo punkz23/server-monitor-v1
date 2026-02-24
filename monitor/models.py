@@ -21,6 +21,7 @@ class NetworkDevice(models.Model):
     TYPE_MOBILE = "MOBILE"
     TYPE_PRINTER = "PRINTER"
     TYPE_ACCESS_POINT = "ACCESS_POINT"
+    TYPE_NAS = "NAS"
     TYPE_UNKNOWN = "UNKNOWN"
     
     TYPE_CHOICES = [
@@ -31,6 +32,7 @@ class NetworkDevice(models.Model):
         (TYPE_MOBILE, "Mobile Phone"),
         (TYPE_PRINTER, "Printer"),
         (TYPE_ACCESS_POINT, "Access Point"),
+        (TYPE_NAS, "NAS/Storage"),
         (TYPE_UNKNOWN, "Unknown"),
     ]
     
@@ -49,6 +51,13 @@ class NetworkDevice(models.Model):
     notes = models.TextField(blank=True, null=True)
     network = models.CharField(max_length=100, blank=True, null=True, help_text="Network segment or subnet (e.g., 172.10.10.0/24)")
     
+    last_status = models.CharField(
+        max_length=10,
+        choices=[("UP", "Up"), ("DOWN", "Down"), ("UNKNOWN", "Unknown")],
+        default="UNKNOWN",
+        help_text="Last known status of the device"
+    )
+
     # Existing SNMP and API fields
     snmp_community = models.CharField(max_length=100, default="public")
     snmp_port = models.PositiveIntegerField(default=161)
@@ -491,6 +500,7 @@ class AlertRule(models.Model):
     KIND_CPU_HIGH = "cpu_high"
     KIND_RAM_HIGH = "ram_high"
     KIND_DB_CONN_HIGH = "db_conn_high"
+    KIND_DEVICE_DOWN = "device_down"
 
     SEVERITY_INFO = "INFO"
     SEVERITY_WARN = "WARN"
@@ -504,6 +514,7 @@ class AlertRule(models.Model):
         (KIND_CPU_HIGH, "CPU high"),
         (KIND_RAM_HIGH, "RAM high"),
         (KIND_DB_CONN_HIGH, "DB connection usage high"),
+        (KIND_DEVICE_DOWN, "Network device down"),
     ]
 
     SEVERITY_CHOICES = [

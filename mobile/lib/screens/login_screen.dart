@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../core/api_client.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/auth_provider.dart';
 import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,7 +17,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _error;
+  int _logoTapCount = 0;
+  DateTime? _lastLogoTap;
 
   Future<void> _handleLogin(WidgetRef ref) async {
     setState(() {
@@ -37,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       final token = response.data['token'];
-      await client.saveToken(token);
+      await ref.read(authStateProvider.notifier).login(token, _usernameController.text);
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -68,6 +72,51 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _handleLogoTap() {
+    final now = DateTime.now();
+    if (_lastLogoTap == null || now.difference(_lastLogoTap!) > const Duration(seconds: 2)) {
+      _logoTapCount = 1;
+    } else {
+      _logoTapCount++;
+    }
+    _lastLogoTap = now;
+
+    if (_logoTapCount == 4) {
+      _logoTapCount = 0;
+      _showEditUrlDialog();
+    }
+  }
+
+  void _showEditUrlDialog() {
+    final client = ref.read(apiClientProvider).value;
+    if (client == null) return;
+
+    final controller = TextEditingController(text: client.baseUrl);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit API Base URL'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'http://192.168.1.1:8000/api'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              ref.read(apiClientProvider.notifier).setBaseUrl(controller.text);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('API URL updated')),
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,7 +127,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.security, size: 80, color: Color(0xFF3B82F6)),
+              GestureDetector(
+                onTap: _handleLogoTap,
+                child: const Icon(Icons.security, size: 80, color: Color(0xFF3B82F6)),
+              ),
               const SizedBox(height: 24),
               const Text(
                 'ServerWatch Mobile',
@@ -93,9 +145,17 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
-                obscureText: true,
+                obscureText: _obscurePassword,
                 style: const TextStyle(color: Colors.white),
-                decoration: _inputDecoration('Password', Icons.lock),
+                decoration: _inputDecoration('Password', Icons.lock).copyWith(
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white38,
+                    ),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 16),
