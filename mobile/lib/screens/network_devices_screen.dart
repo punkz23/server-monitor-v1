@@ -33,7 +33,7 @@ class NetworkDevicesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final devicesAsync = ref.watch(networkDevicesProvider);
-    final scanState = ref.watch(networkScanProvider);
+    final actionState = ref.watch(networkDeviceActionProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F23),
@@ -43,6 +43,10 @@ class NetworkDevicesScreen extends ConsumerWidget {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+            onPressed: () => _showAddDeviceDialog(context, ref),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(networkDevicesProvider),
           ),
@@ -50,7 +54,7 @@ class NetworkDevicesScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          _buildScanHeader(context, ref, scanState),
+          _buildScanHeader(context, ref, actionState),
           Expanded(
             child: devicesAsync.when(
               data: (devices) => _buildDeviceList(context, devices),
@@ -65,8 +69,97 @@ class NetworkDevicesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildScanHeader(BuildContext context, WidgetRef ref, AsyncValue<int> scanState) {
-    final isScanning = scanState is AsyncLoading;
+  void _showAddDeviceDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    final ipController = TextEditingController();
+    String selectedType = 'UNKNOWN';
+
+    final types = [
+      'UNKNOWN', 'FIREWALL', 'SWITCH', 'ROUTER', 'PC', 'MOBILE', 'PRINTER', 'NAS', 'ACCESS_POINT'
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF181929),
+          title: const Text('Add Network Device', style: TextStyle(color: Colors.white)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('Device Name', Icons.label),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: ipController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('IP Address', Icons.network_check),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedType,
+                  dropdownColor: const Color(0xFF181929),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('Device Type', Icons.category),
+                  items: types.map((t) => DropdownMenuItem(
+                    value: t,
+                    child: Text(t),
+                  )).toList(),
+                  onChanged: (val) => setState(() => selectedType = val!),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isEmpty || ipController.text.isEmpty) return;
+                
+                final success = await ref.read(networkDeviceActionProvider.notifier).addDevice(
+                  nameController.text,
+                  ipController.text,
+                  selectedType,
+                );
+
+                if (success && context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Device added successfully')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              child: const Text('Add Device', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+      prefixIcon: Icon(icon, color: Colors.white38, size: 20),
+      filled: true,
+      fillColor: const Color(0xFF0F0F23),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.blue)),
+    );
+  }
+
+  Widget _buildScanHeader(BuildContext context, WidgetRef ref, AsyncValue<dynamic> actionState) {
+    final isScanning = actionState is AsyncLoading;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -94,7 +187,7 @@ class NetworkDevicesScreen extends ConsumerWidget {
             ),
           ),
           ElevatedButton.icon(
-            onPressed: isScanning ? null : () => ref.read(networkScanProvider.notifier).triggerScan(),
+            onPressed: isScanning ? null : () => ref.read(networkDeviceActionProvider.notifier).triggerScan(),
             icon: isScanning
                 ? const SizedBox(
                     width: 16,

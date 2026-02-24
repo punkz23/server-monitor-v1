@@ -10,28 +10,48 @@ final networkDevicesProvider = FutureProvider<List<NetworkDevice>>((ref) async {
   return data.map((d) => NetworkDevice.fromJson(d)).toList();
 });
 
-class NetworkScanNotifier extends StateNotifier<AsyncValue<int>> {
+class NetworkDeviceNotifier extends StateNotifier<AsyncValue<dynamic>> {
   final Ref ref;
-  NetworkScanNotifier(this.ref) : super(const AsyncValue.data(0));
+  NetworkDeviceNotifier(this.ref) : super(const AsyncValue.data(null));
 
   Future<void> triggerScan() async {
     state = const AsyncValue.loading();
     try {
       final client = ref.read(apiClientProvider).value!;
-      final response = await client.dio.post('/mobile/network-devices/scan/');
+      await client.dio.post('/mobile/network-devices/scan/');
       
-      final int count = response.data['count'] ?? 0;
+      // Wait a few seconds for the server-side scan to make some progress
+      await Future.delayed(const Duration(seconds: 5));
       
-      // Refresh the list after successful scan
+      // Refresh the list
       ref.invalidate(networkDevicesProvider);
       
-      state = AsyncValue.data(count);
+      state = const AsyncValue.data(null);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
   }
+
+  Future<bool> addDevice(String name, String ipAddress, String type) async {
+    state = const AsyncValue.loading();
+    try {
+      final client = ref.read(apiClientProvider).value!;
+      await client.dio.post('/mobile/network-devices/add/', data: {
+        'name': name,
+        'ip_address': ipAddress,
+        'device_type': type,
+      });
+      
+      ref.invalidate(networkDevicesProvider);
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+      return false;
+    }
+  }
 }
 
-final networkScanProvider = StateNotifierProvider<NetworkScanNotifier, AsyncValue<int>>((ref) {
-  return NetworkScanNotifier(ref);
+final networkDeviceActionProvider = StateNotifierProvider<NetworkDeviceNotifier, AsyncValue<dynamic>>((ref) {
+  return NetworkDeviceNotifier(ref);
 });
