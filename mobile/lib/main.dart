@@ -23,6 +23,7 @@ class ServerWatchApp extends ConsumerWidget {
       onPointerMove: (_) => ref.read(authStateProvider.notifier).resetTimer(),
       onPointerUp: (_) => ref.read(authStateProvider.notifier).resetTimer(),
       child: MaterialApp(
+        key: ValueKey('app_isLoggedIn_$isLoggedIn'),
         title: 'ServerWatch',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(

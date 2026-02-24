@@ -42,12 +42,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> { // Changed to Consu
 
       final token = response.data['token'];
       await ref.read(authStateProvider.notifier).login(token, _usernameController.text);
-
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-        );
-      }
+      
+      // Removed manual Navigator.pushReplacement as main.dart handles it
     } on DioException catch (e) {
       setState(() {
         if (e.type == DioExceptionType.connectionTimeout || 

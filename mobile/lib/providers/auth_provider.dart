@@ -10,19 +10,23 @@ class AuthNotifier extends StateNotifier<bool> {
   final Ref _ref;
   Timer? _inactivityTimer;
   static const _inactivityDuration = Duration(minutes: 5);
+  bool _initialized = false;
 
   AuthNotifier(this._ref) : super(false) {
-    _checkInitialAuth();
+    // Watch apiClientProvider to know when it's ready
+    _ref.listen<AsyncValue<ApiClient>>(apiClientProvider, (previous, next) {
+      if (next is AsyncData<ApiClient> && !_initialized) {
+        _checkInitialAuth(next.value);
+      }
+    }, fireImmediately: true);
   }
 
-  Future<void> _checkInitialAuth() async {
-    final client = _ref.read(apiClientProvider).value;
-    if (client != null) {
-      final hasToken = await client.hasToken();
-      state = hasToken;
-      if (hasToken) {
-        _startTimer();
-      }
+  Future<void> _checkInitialAuth(ApiClient client) async {
+    final hasToken = await client.hasToken();
+    state = hasToken;
+    _initialized = true;
+    if (hasToken) {
+      _startTimer();
     }
   }
 
@@ -50,12 +54,16 @@ class AuthNotifier extends StateNotifier<bool> {
   }
 
   Future<void> logout() async {
+    _inactivityTimer?.cancel();
     final client = _ref.read(apiClientProvider).value;
     if (client != null) {
-      await client.deleteToken();
-      _inactivityTimer?.cancel();
-      state = false;
+      try {
+        await client.deleteToken();
+      } catch (e) {
+        // ignore
+      }
     }
+    state = false;
   }
 
   @override
