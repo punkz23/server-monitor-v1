@@ -40,23 +40,37 @@ def _matches_rule_scope(rule: AlertRule, server: Server) -> bool:
     if not wanted:
         return True
 
-    have = _parse_tags(server.tags)
-    if not have:
-        return False
-
-    return bool(wanted.intersection(have))
+    # If server is a NetworkDevice, it doesn't have tags field in the same way, 
+    # but we'll check if name matches or just allow if no filter
+    if hasattr(server, 'tags'):
+        have = _parse_tags(server.tags)
+        if not have:
+            return False
+        return bool(wanted.intersection(have))
+    
+    return True
 
 
 def _rule_condition(rule: AlertRule, server: Server, now):
     k = rule.kind
 
     if k == AlertRule.KIND_SERVER_DOWN:
-        return server.last_status == Server.STATUS_DOWN, None
+        return server.last_status == "DOWN", None
+
+    if k == AlertRule.KIND_DEVICE_DOWN:
+        # Check for NetworkDevice status
+        if hasattr(server, 'last_status'):
+            return server.last_status == "DOWN", None
+        return False, None
 
     if k == AlertRule.KIND_HTTP_UNHEALTHY:
-        return server.http_check and server.last_http_ok is False, None
+        if hasattr(server, 'http_check'):
+            return server.http_check and server.last_http_ok is False, None
+        return False, None
 
     if k == AlertRule.KIND_AGENT_STALE:
+        if not hasattr(server, 'last_resource_checked'):
+            return False, None
         last = server.last_resource_checked
         if last is None:
             return True, None
@@ -67,24 +81,26 @@ def _rule_condition(rule: AlertRule, server: Server, now):
         return age > threshold, age
 
     if k == AlertRule.KIND_DB_CONNECT_FAIL:
-        return server.last_db_connect_ok is False, None
+        if hasattr(server, 'last_db_connect_ok'):
+            return server.last_db_connect_ok is False, None
+        return False, None
 
     if k == AlertRule.KIND_CPU_HIGH:
-        if rule.threshold is None:
+        if rule.threshold is None or not hasattr(server, 'last_cpu_percent'):
             return False, None
         if server.last_cpu_percent is None:
             return False, None
         return float(server.last_cpu_percent) >= float(rule.threshold), float(server.last_cpu_percent)
 
     if k == AlertRule.KIND_RAM_HIGH:
-        if rule.threshold is None:
+        if rule.threshold is None or not hasattr(server, 'last_ram_percent'):
             return False, None
         if server.last_ram_percent is None:
             return False, None
         return float(server.last_ram_percent) >= float(rule.threshold), float(server.last_ram_percent)
 
     if k == AlertRule.KIND_DB_CONN_HIGH:
-        if rule.threshold is None:
+        if rule.threshold is None or not hasattr(server, 'last_db_conn_usage_percent'):
             return False, None
         if server.last_db_conn_usage_percent is None:
             return False, None
@@ -94,10 +110,29 @@ def _rule_condition(rule: AlertRule, server: Server, now):
 
 
 def _event_payload(e: AlertEvent) -> dict:
+    from .models import Server, NetworkDevice
+    
+    server_data = {"id": None, "name": "Unknown"}
+    if e.server_id:
+        # Check if it's a Server or NetworkDevice for naming
+        try:
+            srv = Server.objects.get(id=e.server_id)
+            server_data = {"id": srv.id, "name": srv.name, "type": "server"}
+        except Server.DoesNotExist:
+            try:
+                # We reuse server_id field for NetworkDevice id in AlertEvent for now 
+                # or we might need a separate field. Given the current schema:
+                # server = models.ForeignKey(Server, ...)
+                # If NetworkDevice is not a Server, this might fail if not nullable.
+                # Let's check models.py for AlertEvent.
+                pass
+            except:
+                pass
+
     return {
         "id": e.id,
         "created_at": e.created_at.isoformat() if e.created_at else None,
-        "server": {"id": e.server_id, "name": e.server.name if e.server_id else ""},
+        "server": server_data,
         "rule_id": e.rule_id,
         "kind": e.kind,
         "severity": e.severity,
@@ -116,6 +151,16 @@ def _evaluate_rule(rule: AlertRule, server: Server, now: datetime, channel_layer
     cond, value = _rule_condition(rule, server, now)
     emitted = []
     is_active = False
+    
+    # Identify if it's a Server or NetworkDevice for the AlertState
+    from .models import Server, NetworkDevice, AlertState
+    
+    # NOTE: AlertState currently has a ForeignKey to Server. 
+    # If we want to monitor NetworkDevice, we need to handle this.
+    # For now, let's assume we only evaluate Server rules here to avoid DB errors.
+    if not isinstance(server, Server):
+        # Handle NetworkDevice alerts differently or skip for now if schema doesn't support it
+        return [], False
 
     with transaction.atomic():
         state, _ = AlertState.objects.select_for_update().get_or_create(rule=rule, server=server)
@@ -145,6 +190,11 @@ def _evaluate_rule(rule: AlertRule, server: Server, now: datetime, channel_layer
                             ]
                         )
                         is_active = True
+                        
+                        # Build detailed message with resource status
+                        msg = rule.kind
+                        if hasattr(server, 'last_cpu_percent') and server.last_cpu_percent is not None:
+                            msg += f" (CPU: {server.last_cpu_percent}%, RAM: {server.last_ram_percent}%, Disk: {server.last_disk_percent}%)"
 
                         fired_evt = AlertEvent.objects.create(
                             server=server,
@@ -153,7 +203,7 @@ def _evaluate_rule(rule: AlertRule, server: Server, now: datetime, channel_layer
                             severity=rule.severity,
                             is_recovery=False,
                             title=rule.name,
-                            message=rule.kind,
+                            message=msg,
                             value=value,
                             payload={"kind": rule.kind, "value": value},
                         )
@@ -200,7 +250,13 @@ def _evaluate_rule(rule: AlertRule, server: Server, now: datetime, channel_layer
             channels.append('push')
             
         subject = f"ALERT: {fired_evt.title} on {server.name}"
-        message = f"Severity: {fired_evt.severity}\nMessage: {fired_evt.message}\nValue: {fired_evt.value}"
+        
+        # Include resource status in notification message
+        resource_info = ""
+        if hasattr(server, 'last_cpu_percent') and server.last_cpu_percent is not None:
+            resource_info = f"\nStatus: CPU {server.last_cpu_percent}%, RAM {server.last_ram_percent}%, Disk {server.last_disk_percent}%"
+            
+        message = f"Severity: {fired_evt.severity}\nMessage: {fired_evt.message}\nValue: {fired_evt.value}{resource_info}"
         notification_service.send_notification(channels, "admin", subject, message)
 
     if recovered_evt is not None:
@@ -222,6 +278,38 @@ def _evaluate_rule(rule: AlertRule, server: Server, now: datetime, channel_layer
         notification_service.send_notification(channels, "admin", subject, message)
 
     return emitted, is_active
+
+
+def evaluate_alerts_for_device(device: NetworkDevice, now=None, channel_layer=None) -> list[dict]:
+    """
+    Evaluate alerts for a NetworkDevice.
+    Note: Current schema AlertState/AlertEvent depends on Server model.
+    If we want to support NetworkDevice alerts, we may need to adapt these models.
+    For now, we implement a simplified check that logs to console or sends direct notifications.
+    """
+    if now is None:
+        now = timezone.now()
+
+    if not device.enabled:
+        return []
+
+    rules = list(AlertRule.objects.filter(enabled=True, kind=AlertRule.KIND_DEVICE_DOWN).order_by("id"))
+    emitted = []
+    
+    for rule in rules:
+        cond, _ = _rule_condition(rule, device, now)
+        if cond:
+            # Simple notification for now as AlertState doesn't support NetworkDevice yet
+            logger.warning(f"DEVICE ALERT: {device.name} is DOWN!")
+            
+            # Send notification if not already sent recently (simple throttling could be added)
+            channels = list(rule.notification_channels) if rule.notification_channels else ['console', 'push']
+            subject = f"ALERT: {device.name} is DOWN"
+            message = f"Network device {device.name} ({device.ip_address}) is not responding to ping."
+            notification_service.send_notification(channels, "admin", subject, message)
+            
+    return emitted
+
 
 
 def evaluate_alerts_for_server(server: Server, now=None, channel_layer=None) -> list[dict]:

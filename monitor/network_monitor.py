@@ -19,6 +19,8 @@ from pysnmp.hlapi import (
 )
 
 from .models import NetworkDevice, NetworkMetric, NetworkInterface, SecurityEvent, TrafficLog
+from .services.network_scanner import NetworkScanner
+from .alerts import evaluate_alerts_for_device
 
 logger = logging.getLogger(__name__)
 
@@ -305,18 +307,40 @@ class SophosAPI:
 def monitor_all_devices():
     """Monitor all enabled network devices"""
     devices = NetworkDevice.objects.filter(enabled=True)
+    scanner = NetworkScanner()
     
     for device in devices:
         try:
-            # SNMP monitoring
-            snmp_monitor = SNMPMonitor(device)
-            snmp_monitor.update_device_metrics()
+            # 1. Ping check for UP/DOWN status
+            is_up = scanner.ping_host(str(device.ip_address))
+            new_status = "UP" if is_up else "DOWN"
             
-            # API monitoring (if token is configured)
-            if device.api_token:
-                api = SophosAPI(device)
-                api.update_security_events()
+            # Check if status changed
+            status_changed = (device.last_status != new_status)
+            device.last_status = new_status
+            device.is_active = is_up
+            device.last_checked = datetime.now()
+            device.save(update_fields=['last_status', 'is_active', 'last_checked'])
             
-            logger.info(f"Successfully monitored {device.name}")
+            # 2. SNMP monitoring (only if device is UP)
+            if is_up:
+                try:
+                    snmp_monitor = SNMPMonitor(device)
+                    snmp_monitor.update_device_metrics()
+                except Exception as e:
+                    logger.error(f"SNMP monitoring failed for {device.name}: {e}")
+            
+            # 3. API monitoring (if token is configured and device is UP)
+            if is_up and device.api_token:
+                try:
+                    api = SophosAPI(device)
+                    api.update_security_events()
+                except Exception as e:
+                    logger.error(f"API monitoring failed for {device.name}: {e}")
+            
+            # 4. Evaluate alerts
+            evaluate_alerts_for_device(device)
+            
+            logger.info(f"Successfully monitored {device.name} - Status: {new_status}")
         except Exception as e:
             logger.error(f"Failed to monitor {device.name}: {e}")

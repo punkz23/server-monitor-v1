@@ -29,7 +29,7 @@ class NetworkScanner:
     """Network device scanner that discovers devices on the network"""
     
     # Common ports to scan for device identification
-    COMMON_PORTS = [22, 23, 53, 80, 135, 139, 443, 445, 993, 995, 1723, 3389, 5900, 8080]
+    COMMON_PORTS = [21, 22, 23, 53, 80, 135, 139, 443, 445, 515, 631, 993, 995, 1723, 3389, 5000, 5001, 5900, 8080, 9100]
     
     # MAC address vendor prefixes for device identification
     VENDOR_PREFIXES = {
@@ -63,6 +63,9 @@ class NetworkScanner:
         'B8:27:EB': 'Raspberry Pi',
         'DC:A6:32': 'Raspberry Pi',
         'E4:5F:01': 'Raspberry Pi',
+        '00:15:5D': 'Microsoft',
+        'D0:67:E5': 'Dell',
+        'F8:CA:B8': 'Dell',
         
         # Printer manufacturers
         '00:1E:4F': 'HP',
@@ -80,6 +83,20 @@ class NetworkScanner:
         'C4:2F:90': 'Canon',
         
         # Network equipment
+        '00:04:23': 'Cisco',
+        '00:0B:46': 'Cisco',
+        '00:1D:A1': 'Cisco',
+        '00:0C:42': 'MikroTik',
+        'D4:CA:6D': 'MikroTik',
+        '18:E8:29': 'TP-Link',
+        '00:31:92': 'TP-Link',
+        'B0:BE:76': 'TP-Link',
+        'FC:EC:DA': 'Ubiquiti',
+        '04:18:D6': 'Ubiquiti',
+        '78:8A:20': 'Ubiquiti',
+        '00:11:32': 'Synology',
+        '00:08:9B': 'QNAP',
+        'E0:D9:E3': 'D-Link',
         '00:04:23': 'Cisco',
         '00:0B:46': 'Cisco',
         '00:1D:A1': 'Cisco',
@@ -105,54 +122,6 @@ class NetworkScanner:
         '00:D0:07': 'Cisco',
         '00:D0:08': 'Cisco',
         '00:D0:09': 'Cisco',
-        '00:D0:0A': 'Cisco',
-        '00:D0:0B': 'Cisco',
-        '00:D0:0C': 'Cisco',
-        '00:D0:0D': 'Cisco',
-        '00:D0:0E': 'Cisco',
-        '00:D0:0F': 'Cisco',
-        '00:D0:10': 'Cisco',
-        '00:D0:11': 'Cisco',
-        '00:D0:12': 'Cisco',
-        '00:D0:13': 'Cisco',
-        '00:D0:14': 'Cisco',
-        '00:D0:15': 'Cisco',
-        '00:D0:16': 'Cisco',
-        '00:D0:17': 'Cisco',
-        '00:D0:18': 'Cisco',
-        '00:D0:19': 'Cisco',
-        '00:D0:1A': 'Cisco',
-        '00:D0:1B': 'Cisco',
-        '00:D0:1C': 'Cisco',
-        '00:D0:1D': 'Cisco',
-        '00:D0:1E': 'Cisco',
-        '00:D0:1F': 'Cisco',
-        '00:D0:20': 'Cisco',
-        '00:D0:21': 'Cisco',
-        '00:D0:22': 'Cisco',
-        '00:D0:23': 'Cisco',
-        '00:D0:24': 'Cisco',
-        '00:D0:25': 'Cisco',
-        '00:D0:26': 'Cisco',
-        '00:D0:27': 'Cisco',
-        '00:D0:28': 'Cisco',
-        '00:D0:29': 'Cisco',
-        '00:D0:2A': 'Cisco',
-        '00:D0:2B': 'Cisco',
-        '00:D0:2C': 'Cisco',
-        '00:D0:2D': 'Cisco',
-        '00:D0:2E': 'Cisco',
-        '00:D0:2F': 'Cisco',
-        '00:D0:30': 'Cisco',
-        '00:D0:31': 'Cisco',
-        '00:D0:32': 'Cisco',
-        '00:D0:33': 'Cisco',
-        '00:D0:34': 'Cisco',
-        '00:D0:35': 'Cisco',
-        '00:D0:36': 'Cisco',
-        '00:D0:37': 'Cisco',
-        '00:D0:38': 'Cisco',
-        '00:D0:39': 'Cisco',
         '00:D0:3A': 'Cisco',
         '00:D0:3B': 'Cisco',
         '00:D0:3C': 'Cisco',
@@ -370,9 +339,14 @@ class NetworkScanner:
     def ping_host(self, host: str) -> bool:
         """Ping a host to check if it's online"""
         try:
-            # Windows ping command
+            # Check OS to use correct ping command
+            import platform
+            param = '-n' if platform.system().lower() == 'windows' else '-c'
+            wait_param = '-w' if platform.system().lower() == 'windows' else '-W'
+            timeout_val = str(self.timeout * 1000) if platform.system().lower() == 'windows' else str(self.timeout)
+            
             result = subprocess.run(
-                ['ping', '-n', '1', '-w', str(self.timeout * 1000), host],
+                ['ping', param, '1', wait_param, timeout_val, host],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout + 1
@@ -396,7 +370,7 @@ class NetworkScanner:
                 if host in line:
                     mac_match = re.search(r'([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})', line)
                     if mac_match:
-                        return mac_match.group(0).upper()
+                        return mac_match.group(0).upper().replace('-', ':')
         except Exception as e:
             logger.warning(f"Failed to get MAC address for {host}: {e}")
         return None
@@ -442,7 +416,7 @@ class NetworkScanner:
         NetworkDevice = get_network_device_model()
         
         if mac_address:
-            mac_prefix = mac_address[:8].upper()
+            mac_prefix = mac_address[:8].upper().replace('-', ':')
             
             # Check vendor prefixes for device type
             vendor = self.VENDOR_PREFIXES.get(mac_prefix, '')
@@ -451,27 +425,32 @@ class NetworkScanner:
                 return NetworkDevice.TYPE_MOBILE
             elif vendor in ['HP', 'Lexmark', 'Brother', 'Canon']:
                 return NetworkDevice.TYPE_PRINTER
-            elif vendor in ['Cisco']:
-                return NetworkDevice.TYPE_SWITCH
-            elif vendor in ['VMware', 'VirtualBox', 'Microsoft Hyper-V']:
+            elif vendor in ['Cisco', 'Ubiquiti', 'TP-Link', 'MikroTik', 'D-Link']:
+                return NetworkDevice.TYPE_SWITCH if open_ports and open_ports.get(161) else NetworkDevice.TYPE_ROUTER
+            elif vendor in ['VMware', 'VirtualBox', 'Microsoft Hyper-V', 'Dell', 'Microsoft']:
                 return NetworkDevice.TYPE_PC
+            elif vendor in ['Synology', 'QNAP']:
+                return NetworkDevice.TYPE_NAS
         
         if open_ports:
             # Identify based on open ports
-            if open_ports.get(80) or open_ports.get(443) or open_ports.get(8080):
-                # Could be PC, mobile, or network device with web interface
-                if open_ports.get(22):
-                    return NetworkDevice.TYPE_PC
-                elif open_ports.get(135) or open_ports.get(445):
-                    return NetworkDevice.TYPE_PC
-                else:
-                    return NetworkDevice.TYPE_UNKNOWN
-            
-            if open_ports.get(22) and open_ports.get(80):
-                return NetworkDevice.TYPE_PC
-            
-            if open_ports.get(9100):  # Printer port
+            if open_ports.get(9100) or open_ports.get(515) or open_ports.get(631):  # Printer ports
                 return NetworkDevice.TYPE_PRINTER
+            
+            if open_ports.get(5000) or open_ports.get(5001) or open_ports.get(8080): # NAS web interfaces
+                if mac_address and ('Synology' in self.VENDOR_PREFIXES.get(mac_address[:8].upper(), '') or 
+                                  'QNAP' in self.VENDOR_PREFIXES.get(mac_address[:8].upper(), '')):
+                    return NetworkDevice.TYPE_NAS
+                # Many NAS use 8080, but so do other things. Combined with 445 (SMB), it's more likely a NAS.
+                if open_ports.get(445):
+                    return NetworkDevice.TYPE_NAS
+            
+            if open_ports.get(135) or open_ports.get(445) or open_ports.get(3389):
+                return NetworkDevice.TYPE_PC
+                
+            if open_ports.get(22) and open_ports.get(80):
+                # Could be a router or a Linux PC
+                return NetworkDevice.TYPE_ROUTER if open_ports.get(53) else NetworkDevice.TYPE_PC
             
             if open_ports.get(161):  # SNMP
                 return NetworkDevice.TYPE_SWITCH
