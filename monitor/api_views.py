@@ -161,6 +161,59 @@ def mobile_network_devices(request):
     })
 
 
+@api_view(['POST'])
+@permission_classes([HasMobileAppPermission])
+def mobile_trigger_network_scan(request):
+    """
+    Mobile API: Trigger a network scan and return updated device list
+    """
+    from .services.network_scanner import NetworkScanner
+    
+    scanner = NetworkScanner(timeout=2, max_threads=30)
+    networks = scanner.get_local_networks()
+    
+    # Include the primary network if not detected
+    if "192.168.253.0/24" not in networks:
+        networks.insert(0, "192.168.253.0/24")
+    
+    all_discovered = []
+    for network in networks:
+        try:
+            discovered = scanner.scan_network(network)
+            all_discovered.extend(discovered)
+        except Exception as e:
+            print(f"Error scanning {network}: {e}")
+            
+    # Update database with discovered devices
+    for dev_info in all_discovered:
+        try:
+            NetworkDevice.objects.update_or_create(
+                ip_address=dev_info['ip_address'],
+                defaults={
+                    'name': dev_info.get('hostname') or f"Device-{dev_info['ip_address']}",
+                    'mac_address': dev_info.get('mac_address'),
+                    'vendor': dev_info.get('vendor', 'Unknown'),
+                    'device_type': dev_info.get('device_type', NetworkDevice.TYPE_UNKNOWN),
+                    'is_active': True,
+                    'last_seen': timezone.now(),
+                    'auto_discovered': True
+                }
+            )
+        except Exception as e:
+            print(f"Error saving device {dev_info.get('ip_address')}: {e}")
+
+    # Return the full updated list
+    devices = NetworkDevice.objects.filter(is_active=True).order_by('-last_seen', 'name')
+    serializer = NetworkDeviceSummarySerializer(devices, many=True)
+    
+    return Response({
+        'success': True,
+        'devices': serializer.data,
+        'count': len(all_discovered),
+        'timestamp': timezone.now().isoformat()
+    })
+
+
 @api_view(['GET'])
 @permission_classes([HasMobileAppPermission])
 def mobile_server_detail(request, server_id):

@@ -8,7 +8,8 @@ from .api_views import (
     mobile_server_status, mobile_network_devices, mobile_server_detail,
     mobile_alerts, mobile_metrics_history, mobile_agent_ingest,
     mobile_dashboard_summary, check_certificate, check_all_certificates,
-    certificate_status_summary, add_certificate_from_info
+    certificate_status_summary, add_certificate_from_info,
+    mobile_trigger_network_scan
 )
 from .auth_views import (
     mobile_login, mobile_logout, mobile_token_info, mobile_refresh_token,
@@ -30,6 +31,7 @@ mobile_urlpatterns = [
     path('dashboard/', mobile_dashboard_summary, name='mobile-dashboard-summary'),
     path('server-status/', mobile_server_status, name='mobile-server-status'),
     path('network-devices/', mobile_network_devices, name='mobile-network-devices'),
+    path('network-devices/scan/', mobile_trigger_network_scan, name='mobile-network-scan'),
     path('server/<int:server_id>/', mobile_server_detail, name='mobile-server-detail'),
     path('alerts/', mobile_alerts, name='mobile-alerts'),
     path('server/<int:server_id>/metrics/', mobile_metrics_history, name='mobile-metrics-history'),

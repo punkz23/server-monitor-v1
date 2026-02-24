@@ -7,7 +7,7 @@ from django.utils import timezone
 from .api_views import (
     mobile_server_status, mobile_network_devices, mobile_server_detail,
     mobile_alerts, mobile_metrics_history, mobile_agent_ingest,
-    mobile_dashboard_summary
+    mobile_dashboard_summary, mobile_trigger_network_scan
 )
 
 
@@ -27,6 +27,7 @@ def v1_api_info(request):
                 'dashboard': '/api/v1/mobile/dashboard/',
                 'server_status': '/api/v1/mobile/server-status/',
                 'network_devices': '/api/v1/mobile/network-devices/',
+                'network_scan': '/api/v1/mobile/network-devices/scan/',
                 'server_detail': '/api/v1/mobile/server/{id}/',
                 'alerts': '/api/v1/mobile/alerts/',
                 'metrics': '/api/v1/mobile/server/{id}/metrics/',
@@ -66,6 +67,7 @@ v1_mobile_urlpatterns = [
     path('dashboard/', mobile_dashboard_summary, name='v1-mobile-dashboard'),
     path('server-status/', mobile_server_status, name='v1-mobile-server-status'),
     path('network-devices/', mobile_network_devices, name='v1-mobile-network-devices'),
+    path('network-devices/scan/', mobile_trigger_network_scan, name='v1-mobile-network-scan'),
     path('server/<int:server_id>/', mobile_server_detail, name='v1-mobile-server-detail'),
     path('alerts/', mobile_alerts, name='v1-mobile-alerts'),
     path('server/<int:server_id>/metrics/', mobile_metrics_history, name='v1-mobile-metrics-history'),

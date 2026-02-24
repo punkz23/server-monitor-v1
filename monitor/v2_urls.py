@@ -7,7 +7,7 @@ from django.utils import timezone
 from .api_views import (
     mobile_server_status, mobile_network_devices, mobile_server_detail,
     mobile_alerts, mobile_metrics_history, mobile_agent_ingest,
-    mobile_dashboard_summary
+    mobile_dashboard_summary, mobile_trigger_network_scan
 )
 from .v2_views import (
     v2_mobile_server_status, v2_mobile_dashboard_summary,
@@ -32,6 +32,7 @@ def v2_api_info(request):
                 'dashboard': '/api/v2/mobile/dashboard/',
                 'server_status': '/api/v2/mobile/server-status/',
                 'network_devices': '/api/v2/mobile/network-devices/',
+                'network_scan': '/api/v2/mobile/network-devices/scan/',
                 'server_detail': '/api/v2/mobile/server/{id}/',
                 'alerts': '/api/v2/mobile/alerts/',
                 'metrics': '/api/v2/mobile/server/{id}/metrics/',
@@ -90,6 +91,7 @@ v2_mobile_urlpatterns = [
     path('server-status/', v2_mobile_server_status, name='v2-mobile-server-status'),
     path('server-status/v2/', v2_mobile_server_status, name='v2-mobile-server-status-v2'),
     path('network-devices/', mobile_network_devices, name='v2-mobile-network-devices'),
+    path('network-devices/scan/', mobile_trigger_network_scan, name='v2-mobile-network-scan'),
     path('server/<int:server_id>/', v2_server_detail, name='v2-mobile-server-detail'),
     path('alerts/', v2_mobile_alerts, name='v2-mobile-alerts'),
     path('server/<int:server_id>/metrics/', mobile_metrics_history, name='v2-mobile-metrics-history'),
