@@ -177,13 +177,11 @@ def mobile_trigger_network_scan(request):
     
     def run_scan_background():
         try:
-            logger.info("Starting background network scan...")
+            logger.info("Starting background network scan for 192.168.253.0/24...")
             scanner = NetworkScanner(timeout=2, max_threads=30)
-            networks = scanner.get_local_networks()
             
-            # Include the primary network if not detected
-            if "192.168.253.0/24" not in networks:
-                networks.insert(0, "192.168.253.0/24")
+            # Explicitly only scan the 192.168.253.0/24 network as requested
+            networks = ["192.168.253.0/24"]
             
             total_discovered = 0
             for network in networks:
@@ -195,7 +193,9 @@ def mobile_trigger_network_scan(request):
                     # Update database with discovered devices
                     for dev_info in discovered:
                         try:
-                            NetworkDevice.objects.update_or_create(
+                            # Use update_or_create but keep 'enabled' as is if it exists, 
+                            # or default to False for new ones so user has to 'Save for monitoring'
+                            device, created = NetworkDevice.objects.get_or_create(
                                 ip_address=dev_info['ip_address'],
                                 defaults={
                                     'name': dev_info.get('hostname') or f"Device-{dev_info['ip_address']}",
@@ -204,9 +204,18 @@ def mobile_trigger_network_scan(request):
                                     'device_type': dev_info.get('device_type', NetworkDevice.TYPE_UNKNOWN),
                                     'is_active': True,
                                     'last_seen': timezone.now(),
-                                    'auto_discovered': True
+                                    'auto_discovered': True,
+                                    'enabled': False # Default to not monitored yet
                                 }
                             )
+                            
+                            if not created:
+                                # Update existing device info but don't touch 'enabled' or 'name'
+                                device.mac_address = dev_info.get('mac_address') or device.mac_address
+                                device.is_active = True
+                                device.last_seen = timezone.now()
+                                device.save(update_fields=['mac_address', 'is_active', 'last_seen'])
+                                
                             total_discovered += 1
                         except Exception as e:
                             logger.error(f"Error saving device {dev_info.get('ip_address')}: {e}")
@@ -227,43 +236,68 @@ def mobile_trigger_network_scan(request):
     
     return Response({
         'success': True,
-        'message': 'Server-side network scan initiated',
+        'message': 'Server-side network scan initiated for 192.168.253.0/24',
         'timestamp': timezone.now().isoformat()
     })
 
 
 @api_view(['POST'])
 @permission_classes([HasMobileAppPermission])
+def mobile_clear_network_devices(request):
+    """
+    Mobile API: Clear all network devices from the list
+    """
+    try:
+        count = NetworkDevice.objects.all().count()
+        NetworkDevice.objects.all().delete()
+        return Response({
+            'success': True,
+            'message': f'Cleared {count} devices',
+            'timestamp': timezone.now().isoformat()
+        })
+    except Exception as e:
+        return Response(
+            {'success': False, 'error': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([HasMobileAppPermission])
 def mobile_add_network_device(request):
     """
-    Mobile API: Manually add a network device for monitoring
+    Mobile API: Manually add or toggle monitoring for a network device
     """
     name = request.data.get('name')
     ip_address = request.data.get('ip_address')
     device_type = request.data.get('device_type', NetworkDevice.TYPE_UNKNOWN)
+    enabled = request.data.get('enabled', True) # Default to True when manually adding/saving
     
-    if not name or not ip_address:
+    if not ip_address:
         return Response(
-            {'success': False, 'error': 'Name and IP Address are required'},
+            {'success': False, 'error': 'IP Address is required'},
             status=status.HTTP_400_BAD_REQUEST
         )
         
     try:
+        defaults = {
+            'device_type': device_type,
+            'is_active': True,
+            'last_seen': timezone.now(),
+            'enabled': enabled
+        }
+        if name:
+            defaults['name'] = name
+
         device, created = NetworkDevice.objects.update_or_create(
             ip_address=ip_address,
-            defaults={
-                'name': name,
-                'device_type': device_type,
-                'is_active': True,
-                'auto_discovered': False,
-                'last_seen': timezone.now()
-            }
+            defaults=defaults
         )
         
         serializer = NetworkDeviceSummarySerializer(device)
         return Response({
             'success': True,
-            'message': 'Device added successfully' if created else 'Device updated successfully',
+            'message': 'Device saved for monitoring' if enabled else 'Device updated',
             'device': serializer.data
         })
     except Exception as e:

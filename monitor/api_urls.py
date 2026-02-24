@@ -9,7 +9,8 @@ from .api_views import (
     mobile_alerts, mobile_metrics_history, mobile_agent_ingest,
     mobile_dashboard_summary, check_certificate, check_all_certificates,
     certificate_status_summary, add_certificate_from_info,
-    mobile_trigger_network_scan, mobile_add_network_device
+    mobile_trigger_network_scan, mobile_add_network_device,
+    mobile_clear_network_devices
 )
 from .auth_views import (
     mobile_login, mobile_logout, mobile_token_info, mobile_refresh_token,
@@ -33,6 +34,7 @@ mobile_urlpatterns = [
     path('network-devices/', mobile_network_devices, name='mobile-network-devices'),
     path('network-devices/scan/', mobile_trigger_network_scan, name='mobile-network-scan'),
     path('network-devices/add/', mobile_add_network_device, name='mobile-add-network-device'),
+    path('network-devices/clear/', mobile_clear_network_devices, name='mobile-clear-network-devices'),
     path('server/<int:server_id>/', mobile_server_detail, name='mobile-server-detail'),
     path('alerts/', mobile_alerts, name='mobile-alerts'),
     path('server/<int:server_id>/metrics/', mobile_metrics_history, name='mobile-metrics-history'),

@@ -54,10 +54,14 @@ class NetworkDevicesScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          _buildScanHeader(context, ref, actionState),
+          devicesAsync.when(
+            data: (devices) => _buildScanHeader(context, ref, actionState, devices.length),
+            loading: () => _buildScanHeader(context, ref, actionState, 0),
+            error: (_, __) => _buildScanHeader(context, ref, actionState, 0),
+          ),
           Expanded(
             child: devicesAsync.when(
-              data: (devices) => _buildDeviceList(context, devices),
+              data: (devices) => _buildDeviceList(context, ref, devices),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(
                 child: Text('Error: $err', style: const TextStyle(color: Colors.white70)),
@@ -158,7 +162,7 @@ class NetworkDevicesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildScanHeader(BuildContext context, WidgetRef ref, AsyncValue<dynamic> actionState) {
+  Widget _buildScanHeader(BuildContext context, WidgetRef ref, AsyncValue<dynamic> actionState, int count) {
     final isScanning = actionState is AsyncLoading;
 
     return Container(
@@ -169,56 +173,96 @@ class NetworkDevicesScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.blue.withOpacity(0.1)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Network Discovery',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Network Discovery ($count devices)',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    const Text(
+                      'Target: 192.168.253.0/24',
+                      style: TextStyle(color: Colors.white38, fontSize: 12),
+                    ),
+                  ],
                 ),
-                Text(
-                  'Scan local network for devices',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              ElevatedButton.icon(
+                onPressed: isScanning ? null : () async {
+                  final success = await ref.read(networkDeviceActionProvider.notifier).triggerScan();
+                  if (success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Server-side scan initiated for 192.168.253.0/24.'),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                },
+                icon: isScanning
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.search, size: 18),
+                label: Text(isScanning ? 'Scanning...' : 'Scan Now'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.blue.withOpacity(0.3),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          if (count > 0) ...[
+            const SizedBox(height: 8),
+            const Divider(color: Colors.white10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: isScanning ? null : () => _showClearConfirm(context, ref),
+                  icon: const Icon(Icons.delete_sweep_outlined, size: 18, color: Colors.redAccent),
+                  label: const Text('Clear All', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
                 ),
               ],
             ),
-          ),
-          ElevatedButton.icon(
-            onPressed: isScanning ? null : () async {
-              final success = await ref.read(networkDeviceActionProvider.notifier).triggerScan();
-              if (success && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Server-side scan initiated. Devices will appear shortly.'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              }
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showClearConfirm(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF181929),
+        title: const Text('Clear List?', style: TextStyle(color: Colors.white)),
+        content: const Text('This will remove all discovered devices from the database.', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              ref.read(networkDeviceActionProvider.notifier).clearDevices();
+              Navigator.pop(context);
             },
-            icon: isScanning
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.search, size: 18),
-            label: Text(isScanning ? 'Scanning...' : 'Scan Now'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.blue.withOpacity(0.3),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+            child: const Text('Clear All', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDeviceList(BuildContext context, List<NetworkDevice> devices) {
+  Widget _buildDeviceList(BuildContext context, WidgetRef ref, List<NetworkDevice> devices) {
     if (devices.isEmpty) {
       return const Center(
         child: Text('No devices found. Run a scan to discover devices.', 
@@ -231,59 +275,61 @@ class NetworkDevicesScreen extends ConsumerWidget {
       itemCount: devices.length,
       itemBuilder: (context, index) {
         final device = devices[index];
-        return _buildDeviceCard(device);
+        return _buildDeviceCard(context, ref, device);
       },
     );
   }
 
-  Widget _buildDeviceCard(NetworkDevice device) {
+  Widget _buildDeviceCard(BuildContext context, WidgetRef ref, NetworkDevice device) {
+    final bool isMonitored = (device as dynamic).enabled ?? false; // Need to ensure model has it or cast to dynamic
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF181929),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: device.isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+          color: isMonitored 
+              ? Colors.blue.withOpacity(0.3)
+              : (device.isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1)),
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: (device.isActive ? Colors.green : Colors.grey).withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            _getDeviceIcon(device.deviceType),
-            color: device.isActive ? Colors.green : Colors.grey,
-            size: 24,
-          ),
-        ),
-        title: Text(
-          device.name,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              '${device.ipAddress} • ${device.deviceTypeDisplay}',
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
-            ),
-            if (device.macAddress != null)
-              Text(
-                device.macAddress!,
-                style: const TextStyle(color: Colors.white24, fontSize: 10, fontFamily: 'monospace'),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (device.isActive ? Colors.green : Colors.grey).withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(
+              child: Icon(
+                _getDeviceIcon(device.deviceType),
+                color: device.isActive ? Colors.green : Colors.grey,
+                size: 24,
+              ),
+            ),
+            title: Text(
+              device.name,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text(
+                  '${device.ipAddress} • ${device.deviceTypeDisplay}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+                if (device.macAddress != null)
+                  Text(
+                    device.macAddress!,
+                    style: const TextStyle(color: Colors.white24, fontSize: 10, fontFamily: 'monospace'),
+                  ),
+              ],
+            ),
+            trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: (device.isActive ? Colors.green : Colors.red).withOpacity(0.1),
@@ -298,15 +344,48 @@ class NetworkDevicesScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            if (device.lastSeen != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                DateFormat('HH:mm').format(device.lastSeen!),
-                style: const TextStyle(color: Colors.white24, fontSize: 10),
+          ),
+          if (!isMonitored)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final success = await ref.read(networkDeviceActionProvider.notifier).addDevice(
+                      device.name,
+                      device.ipAddress,
+                      device.deviceType,
+                    );
+                    if (success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${device.name} saved for monitoring')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.add_moderator, size: 16),
+                  label: const Text('Save for Monitoring', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    side: const BorderSide(color: Colors.blue),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
               ),
-            ],
-          ],
-        ),
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle, size: 12, color: Colors.blue),
+                  SizedBox(width: 4),
+                  Text('Currently Monitored', style: TextStyle(color: Colors.blue, fontSize: 10)),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

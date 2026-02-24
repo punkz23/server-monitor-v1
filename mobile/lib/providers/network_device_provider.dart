@@ -59,6 +59,21 @@ class NetworkDeviceNotifier extends StateNotifier<AsyncValue<dynamic>> {
       return false;
     }
   }
+
+  Future<bool> clearDevices() async {
+    state = const AsyncValue.loading();
+    try {
+      final client = ref.read(apiClientProvider).value!;
+      await client.dio.post('/mobile/network-devices/clear/');
+      
+      ref.invalidate(networkDevicesProvider);
+      state = const AsyncValue.data(null);
+      return true;
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+      return false;
+    }
+  }
 }
 
 final networkDeviceActionProvider = StateNotifierProvider<NetworkDeviceNotifier, AsyncValue<dynamic>>((ref) {

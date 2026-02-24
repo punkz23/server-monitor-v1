@@ -169,7 +169,7 @@ class NetworkDeviceSummarySerializer(serializers.ModelSerializer):
         model = NetworkDevice
         fields = [
             'id', 'name', 'device_type', 'device_type_display', 'ip_address',
-            'mac_address', 'vendor', 'hostname', 'is_active', 'last_seen'
+            'mac_address', 'vendor', 'hostname', 'is_active', 'last_seen', 'enabled'
         ]
 
 

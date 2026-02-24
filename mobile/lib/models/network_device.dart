@@ -9,6 +9,7 @@ class NetworkDevice {
   final String? hostname;
   final bool isActive;
   final DateTime? lastSeen;
+  final bool enabled;
 
   NetworkDevice({
     required this.id,
@@ -21,6 +22,7 @@ class NetworkDevice {
     this.hostname,
     required this.isActive,
     this.lastSeen,
+    required this.enabled,
   });
 
   factory NetworkDevice.fromJson(Map<String, dynamic> json) {
@@ -34,7 +36,8 @@ class NetworkDevice {
       vendor: json['vendor'] ?? 'Unknown',
       hostname: json['hostname'],
       isActive: json['is_active'] ?? false,
-      lastSeen: json['last_seen'] != null ? DateTime.parse(json['last_seen']) : null,
+      last_seen: json['last_seen'] != null ? DateTime.parse(json['last_seen']) : null,
+      enabled: json['enabled'] ?? false,
     );
   }
 }
