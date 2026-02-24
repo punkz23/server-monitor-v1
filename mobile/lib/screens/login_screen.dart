@@ -6,14 +6,14 @@ import '../providers/dashboard_provider.dart';
 import '../providers/auth_provider.dart';
 import 'main_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget { // Changed to ConsumerStatefulWidget
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState(); // Changed to ConsumerState
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> { // Changed to ConsumerState<LoginScreen>
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   int _logoTapCount = 0;
   DateTime? _lastLogoTap;
 
-  Future<void> _handleLogin(WidgetRef ref) async {
+  Future<void> _handleLogin() async { // Removed WidgetRef ref parameter
     setState(() {
       _isLoading = true;
       _error = null;
@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
         title: const Text('Edit API Base URL'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintText: 'http://192.168.1.1:8000/api'),
+          decoration: const InputDecoration(hintHintText: 'http://192.168.1.1:8000/api'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
@@ -162,22 +162,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
               ],
               const SizedBox(height: 32),
-              Consumer(builder: (context, ref, _) {
-                return SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : () => _handleLogin(ref),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Login', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              // Consumer widget is no longer needed here as ref is directly available in ConsumerState
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : () => _handleLogin(), // Removed ref argument
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                );
-              }),
+                  child: _isLoading 
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Login', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
             ],
           ),
         ),
