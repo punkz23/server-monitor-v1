@@ -332,9 +332,17 @@ class ServerDetailScreen extends ConsumerWidget {
     if (date == null) return 'Unknown';
     final now = DateTime.now();
     final difference = now.difference(date);
-    if (difference.inDays > 7) {
+    
+    if (difference.inSeconds < 60) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
       return DateFormat('MMM dd, yyyy').format(date);
     }
-    return '${difference.inDays}d ago'; // Simple fallback or use timeago if imported correctly
   }
 }
