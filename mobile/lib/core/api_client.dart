@@ -58,6 +58,10 @@ class ApiClient {
     await _storage.write(key: 'auth_token', value: token);
   }
 
+  Future<String?> getToken() async {
+    return await _storage.read(key: 'auth_token');
+  }
+
   Future<void> saveUser(String username) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('logged_in_user', username);

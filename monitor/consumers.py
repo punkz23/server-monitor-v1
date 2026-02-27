@@ -168,3 +168,70 @@ class MonitoringConsumer(AsyncJsonWebsocketConsumer):
                 "is_recovery": event.is_recovery,
             })
         return events
+
+
+class TerminalConsumer(AsyncJsonWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.process = None
+        self.fd = None
+
+    async def connect(self):
+        user = self.scope.get("user")
+        if not user or not user.is_authenticated or user.username != "iggy":
+            await self.close()
+            return
+
+        await self.accept()
+        await self.start_shell()
+
+    async def disconnect(self, close_code):
+        if self.fd:
+            loop = asyncio.get_event_loop()
+            loop.remove_reader(self.fd)
+        if self.process:
+            self.process.terminate()
+            self.process.wait()
+
+    async def start_shell(self):
+        import pty
+        import subprocess
+        import os
+        import asyncio
+        import fcntl
+
+        self.loop = asyncio.get_event_loop()
+        self.fd, child_fd = pty.openpty()
+        self.process = subprocess.Popen(
+            ["/bin/bash"],
+            stdin=child_fd,
+            stdout=child_fd,
+            stderr=child_fd,
+            preexec_fn=os.setsid,
+            env=os.environ.copy()
+        )
+        os.close(child_fd)
+
+        # Set non-blocking
+        flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
+        fcntl.fcntl(self.fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        self.loop.add_reader(self.fd, self.on_stdout)
+
+    def on_stdout(self):
+        import os
+        try:
+            data = os.read(self.fd, 4096)
+            if data:
+                self.loop.create_task(
+                    self.send_json({"type": "stdout", "data": data.decode(errors="replace")})
+                )
+        except Exception:
+            pass
+
+    async def receive_json(self, content):
+        if content.get("type") == "stdin":
+            import os
+            data = content.get("data", "")
+            if self.fd:
+                os.write(self.fd, data.encode())
