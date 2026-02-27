@@ -19,6 +19,7 @@ dependencies:
   connectivity_plus: ^5.0.2
   font_awesome_flutter: ^10.6.0
   timeago: ^3.6.1
+  web_socket_channel: ^2.4.0
 
 dev_dependencies:
   flutter_test:

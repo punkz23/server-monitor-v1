@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/server_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/server_detail.dart';
+import '../widgets/terminal_widget.dart';
 import 'package:intl/intl.dart';
 
 class ServerDetailScreen extends ConsumerWidget {
@@ -18,6 +20,7 @@ class ServerDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(serverDetailProvider(serverId));
+    final usernameAsync = ref.watch(usernameProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F23),
@@ -55,6 +58,11 @@ class ServerDetailScreen extends ConsumerWidget {
                   _buildSectionTitle('SSL Certificates'),
                   const SizedBox(height: 12),
                   ...detail.ssl.map((s) => _buildSslCard(s)),
+                  const SizedBox(height: 24),
+                ],
+                if (serverName.toLowerCase() == 'dummy' && usernameAsync.value == 'iggy') ...[
+                  const TerminalWidget(),
+                  const SizedBox(height: 24),
                 ],
               ],
             ),
