@@ -125,12 +125,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> { // Changed to Consu
             children: [
               GestureDetector(
                 onTap: _handleLogoTap,
-                child: const Icon(Icons.security, size: 80, color: Color(0xFF3B82F6)),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'ServerWatch Mobile',
-                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                child: Image.asset(
+                  'assets/logo.png',
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.security,
+                    size: 80,
+                    color: Color(0xFF3B82F6),
+                  ),
+                ),
               ),
               const SizedBox(height: 48),
               TextField(
