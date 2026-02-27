@@ -74,8 +74,7 @@ class _TerminalWidgetState extends ConsumerState<TerminalWidget> {
     if (_channel != null && _controller.text.isNotEmpty) {
       _channel!.sink.add(jsonEncode({
         'type': 'stdin',
-        'data': '${_controller.text}
-',
+        'data': _controller.text,
       }));
       _controller.clear();
     }
