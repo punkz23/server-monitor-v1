@@ -1049,3 +1049,147 @@ class CCTVDevice(models.Model):
             self.status = "unknown"
             
         self.save()
+
+
+# DTR Biometric Monitoring Models
+class DTRBiometricMetrics(models.Model):
+    """Core biometric accuracy and friction metrics"""
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # Accuracy Metrics
+    false_rejection_rate = models.FloatField(help_text="FRR - Valid employees rejected (%)")
+    retry_count_avg = models.FloatField(help_text="Avg attempts before successful punch")
+    liveness_failures = models.IntegerField(help_text="Spoofing attempts rejected")
+    manual_override_rate = models.FloatField(help_text="Supervisor manual interventions (%)")
+    
+    # Performance Metrics
+    recognition_latency = models.FloatField(help_text="Time from shutter to match (ms)")
+    app_startup_time = models.FloatField(help_text="App start to camera ready (ms)")
+    frame_drop_rate = models.FloatField(help_text="UI jank during face scanning (%)")
+    battery_drain_per_punch = models.FloatField(help_text="Battery consumption per punch (%)")
+    
+    # Environmental Metrics
+    device_model = models.CharField(max_length=100)
+    os_version = models.CharField(max_length=50)
+    location_name = models.CharField(max_length=100)
+    geofence_distance = models.FloatField(help_text="Distance from punch zone (meters)")
+    
+    # Operational Metrics
+    sync_lag = models.FloatField(help_text="Local to server sync time (seconds)")
+    api_error_rate = models.FloatField(help_text="4XX/5XX error rate (%)")
+    
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['timestamp']),
+            models.Index(fields=['device_model']),
+            models.Index(fields=['location_name']),
+        ]
+
+
+class DTRPunchSession(models.Model):
+    """Individual punch session tracking"""
+    session_id = models.CharField(max_length=100, unique=True)
+    employee_id = models.CharField(max_length=50)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # Session Details
+    punch_type = models.CharField(max_length=20)  # AM_IN, AM_OUT, PM_IN, PM_OUT
+    device_model = models.CharField(max_length=100)
+    os_version = models.CharField(max_length=50)
+    app_version = models.CharField(max_length=20)
+    
+    # Performance Metrics
+    startup_time = models.FloatField(null=True, blank=True)
+    camera_ready_time = models.FloatField(null=True, blank=True)
+    face_detection_time = models.FloatField(null=True, blank=True)
+    recognition_time = models.FloatField(null=True, blank=True)
+    total_session_time = models.FloatField(null=True, blank=True)
+    
+    # Biometric Results
+    attempts_count = models.IntegerField(default=1)
+    confidence_score = models.FloatField(null=True, blank=True)
+    liveness_passed = models.BooleanField(default=True)
+    face_detected = models.BooleanField(default=True)
+    
+    # Environmental Context
+    location_name = models.CharField(max_length=100, blank=True)
+    geofence_distance = models.FloatField(null=True, blank=True)
+    network_type = models.CharField(max_length=20, blank=True)  # WiFi, 4G, etc.
+    battery_level_before = models.IntegerField(null=True, blank=True)
+    battery_level_after = models.IntegerField(null=True, blank=True)
+    
+    # Result
+    success = models.BooleanField(default=False)
+    error_type = models.CharField(max_length=50, blank=True)
+    error_message = models.TextField(blank=True)
+    manual_override_required = models.BooleanField(default=False)
+    
+    # Sync Information
+    local_timestamp = models.DateTimeField()
+    server_timestamp = models.DateTimeField(auto_now_add=True)
+    sync_lag = models.FloatField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['employee_id', 'timestamp']),
+            models.Index(fields=['device_model']),
+            models.Index(fields=['location_name']),
+            models.Index(fields=['success']),
+            models.Index(fields=['timestamp']),
+        ]
+
+
+class DTRDevicePerformance(models.Model):
+    """Aggregated performance metrics by device model"""
+    device_model = models.CharField(max_length=100)
+    os_version = models.CharField(max_length=50)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # Aggregated Metrics
+    total_sessions = models.IntegerField(default=0)
+    successful_sessions = models.IntegerField(default=0)
+    failed_sessions = models.IntegerField(default=0)
+    
+    # Performance Averages
+    avg_recognition_latency = models.FloatField(default=0)
+    avg_startup_time = models.FloatField(default=0)
+    avg_confidence_score = models.FloatField(default=0)
+    avg_attempts = models.FloatField(default=0)
+    
+    # Error Rates
+    face_detection_failures = models.IntegerField(default=0)
+    liveness_failures = models.IntegerField(default=0)
+    network_errors = models.IntegerField(default=0)
+    api_errors = models.IntegerField(default=0)
+    
+    class Meta:
+        unique_together = ['device_model', 'os_version', 'timestamp']
+        ordering = ['-timestamp']
+
+
+class DTRLocationMetrics(models.Model):
+    """Location-based performance tracking"""
+    location_name = models.CharField(max_length=100)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # Location Context
+    avg_geofence_distance = models.FloatField(default=0)
+    lighting_conditions = models.CharField(max_length=50, blank=True)  # Good, Poor, Dark
+    network_quality = models.CharField(max_length=20, blank=True)  # Excellent, Good, Poor
+    
+    # Performance Metrics
+    total_punches = models.IntegerField(default=0)
+    successful_punches = models.IntegerField(default=0)
+    avg_recognition_time = models.FloatField(default=0)
+    avg_confidence_score = models.FloatField(default=0)
+    
+    # Environmental Issues
+    lighting_issues = models.IntegerField(default=0)
+    network_issues = models.IntegerField(default=0)
+    geofence_issues = models.IntegerField(default=0)
+    
+    class Meta:
+        unique_together = ['location_name', 'timestamp']
+        ordering = ['-timestamp']

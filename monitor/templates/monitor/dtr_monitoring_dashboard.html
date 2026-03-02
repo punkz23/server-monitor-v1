@@ -1,0 +1,516 @@
+{% extends "monitor/base.html" %}
+
+{% block title %}DTR Biometric Monitoring Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-fingerprint"></i>
+                    DTR Biometric Monitoring Dashboard
+                </h1>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary me-2" id="last-update">Loading...</span>
+                    <button class="btn btn-sm btn-outline-light" onclick="updateDashboard()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accuracy & Friction Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-secondary">
+                <div class="card-header d-flex justify-content-between align-items-center bg-dark">
+                    <h5 class="mb-0 text-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Accuracy & Friction Panel (Core Metrics)
+                    </h5>
+                    <small class="text-muted">Most important for user experience</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="metric-card bg-gradient" id="frr-card">
+                                <h6 class="metric-label">False Rejection Rate</h6>
+                                <h2 class="metric-value" id="frr-value">-</h2>
+                                <small class="metric-subtitle">Threshold: >2%</small>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar" id="frr-progress" role="progressbar"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card bg-gradient" id="retry-card">
+                                <h6 class="metric-label">Avg Retry Count</h6>
+                                <h2 class="metric-value" id="retry-value">-</h2>
+                                <small class="metric-subtitle">Target: <1.5 attempts</small>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar" id="retry-progress" role="progressbar"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card bg-gradient" id="liveness-card">
+                                <h6 class="metric-label">Liveness Failures</h6>
+                                <h2 class="metric-value" id="liveness-value">-</h2>
+                                <small class="metric-subtitle">Fraud detection</small>
+                                <div class="alert alert-warning mt-2" id="liveness-alert" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle"></i> Sudden spike detected!
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card bg-gradient" id="manual-card">
+                                <h6 class="metric-label">Manual Override Rate</h6>
+                                <h2 class="metric-value" id="manual-value">-</h2>
+                                <small class="metric-subtitle">Threshold: >5%</small>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar" id="manual-progress" role="progressbar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance & Latency Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-secondary">
+                <div class="card-header bg-dark">
+                    <h5 class="mb-0 text-info">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Performance & Latency Panel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-light mb-3">Recognition Latency</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="performance-metric">
+                                        <span class="badge bg-success">WiFi</span>
+                                        <h4 class="text-light" id="wifi-latency">-</h4>
+                                        <small class="text-muted">Target: <1s</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="performance-metric">
+                                        <span class="badge bg-warning">4G</span>
+                                        <h4 class="text-light" id="mobile-latency">-</h4>
+                                        <small class="text-muted">Target: <2s</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-4">
+                                    <div class="performance-metric">
+                                        <h6 class="text-light">App Startup</h6>
+                                        <h4 class="text-light" id="startup-time">-</h4>
+                                        <small class="text-muted">Target: <3s</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="performance-metric">
+                                        <h6 class="text-light">Frame Drop Rate</h6>
+                                        <h4 class="text-light" id="frame-drop">-</h4>
+                                        <small class="text-muted">Target: 60fps</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="performance-metric">
+                                        <h6 class="text-light">Battery/Punch</h6>
+                                        <h4 class="text-light" id="battery-drain">-</h4>
+                                        <small class="text-muted">Target: <1%</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Environmental & Hardware Panel -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-secondary">
+                <div class="card-header bg-dark">
+                    <h5 class="mb-0 text-primary">
+                        <i class="fas fa-mobile-alt"></i>
+                        Device Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="device-failures"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-secondary">
+                <div class="card-header bg-dark">
+                    <h5 class="mb-0 text-success">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Location Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="location-failures"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operational & Security Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-secondary">
+                <div class="card-header bg-dark">
+                    <h5 class="mb-0 text-danger">
+                        <i class="fas fa-shield-alt"></i>
+                        Operational & Security Panel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="security-metric">
+                                <h6 class="text-light">Geofence Precision</h6>
+                                <h4 class="text-light" id="geofence-distance">-</h4>
+                                <small class="text-muted">Average distance from punch zone</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="security-metric">
+                                <h6 class="text-light">Sync Lag</h6>
+                                <h4 class="text-light" id="sync-lag">-</h4>
+                                <small class="text-muted">Local to server sync time</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="security-metric">
+                                <h6 class="text-light">API Error Rate</h6>
+                                <h4 class="text-light" id="api-error-rate">-</h4>
+                                <small class="text-muted">4XX/5XX errors</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="security-metric">
+                                <h6 class="text-light">Liveness Success Rate</h6>
+                                <h4 class="text-light" id="liveness-success-rate">-</h4>
+                                <small class="text-muted">Anti-spoofing effectiveness</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Heatmap -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-secondary">
+                <div class="card-header bg-dark">
+                    <h5 class="mb-0 text-danger">
+                        <i class="fas fa-fire"></i>
+                        Location Performance Heatmap
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="heatmap-container" class="d-flex flex-wrap"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.metric-card {
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card h6 {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.metric-card h2 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+}
+
+.metric-card .metric-subtitle {
+    opacity: 0.8;
+    font-size: 0.75rem;
+}
+
+.performance-metric {
+    text-align: center;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    background: var(--card-bg);
+}
+
+.security-metric {
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--card-bg);
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+}
+
+.device-failure-item, .location-failure-item {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--text-primary);
+}
+
+.heatmap-item {
+    display: inline-block;
+    padding: 1.5rem;
+    margin: 0.5rem;
+    border-radius: 0.75rem;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    min-width: 140px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress {
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.card {
+    background: var(--card-bg);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+</style>
+
+<script>
+// Auto-refresh every 30 seconds
+let refreshInterval;
+
+function updateDashboard() {
+    // Show loading state
+    document.getElementById('last-update').textContent = 'Updating...';
+    
+    // Update all panels
+    updateAccuracyFrictionPanel();
+    updatePerformanceLatencyPanel();
+    updateEnvironmentalHardwarePanel();
+    updateOperationalSecurityPanel();
+    updateHeatmap();
+    
+    // Update last update time
+    document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+}
+
+function updateAccuracyFrictionPanel() {
+    fetch('/monitor/api/dtr/accuracy-friction/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const metrics = data.data;
+                
+                // Update FRR
+                document.getElementById('frr-value').textContent = metrics.false_rejection_rate + '%';
+                const frrProgress = document.getElementById('frr-progress');
+                frrProgress.style.width = Math.min(metrics.false_rejection_rate, 100) + '%';
+                frrProgress.className = 'progress-bar ' + (metrics.alerts.frr_critical ? 'bg-danger' : 'bg-success');
+                
+                // Update Retry Count
+                document.getElementById('retry-value').textContent = metrics.retry_count_avg;
+                const retryProgress = document.getElementById('retry-progress');
+                retryProgress.style.width = Math.min(metrics.retry_count_avg * 50, 100) + '%';
+                retryProgress.className = 'progress-bar ' + (metrics.alerts.retry_critical ? 'bg-danger' : 'bg-success');
+                
+                // Update Liveness Failures
+                document.getElementById('liveness-value').textContent = metrics.liveness_failures;
+                const livenessAlert = document.getElementById('liveness-alert');
+                livenessAlert.style.display = metrics.alerts.liveness_spike ? 'block' : 'none';
+                
+                // Update Manual Override
+                document.getElementById('manual-value').textContent = metrics.manual_override_rate + '%';
+                const manualProgress = document.getElementById('manual-progress');
+                manualProgress.style.width = Math.min(metrics.manual_override_rate, 100) + '%';
+                manualProgress.className = 'progress-bar ' + (metrics.alerts.manual_override_critical ? 'bg-danger' : 'bg-success');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating accuracy panel:', error);
+            document.getElementById('last-update').textContent = 'Error loading data';
+        });
+}
+
+function updatePerformanceLatencyPanel() {
+    fetch('/monitor/api/dtr/performance-latency/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const metrics = data.data;
+                
+                // Update recognition latency
+                document.getElementById('wifi-latency').textContent = metrics.recognition_latency.wifi_avg + 'ms';
+                document.getElementById('mobile-latency').textContent = metrics.recognition_latency.mobile_avg + 'ms';
+                
+                // Update other metrics
+                document.getElementById('startup-time').textContent = metrics.app_startup_time + 'ms';
+                document.getElementById('frame-drop').textContent = metrics.frame_drop_rate + '%';
+                document.getElementById('battery-drain').textContent = metrics.battery_drain_per_punch + '%';
+            }
+        })
+        .catch(error => console.error('Error updating performance panel:', error));
+}
+
+function updateEnvironmentalHardwarePanel() {
+    fetch('/monitor/api/dtr/environmental-hardware/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const metrics = data.data;
+                
+                // Update device failures
+                const deviceContainer = document.getElementById('device-failures');
+                deviceContainer.innerHTML = '';
+                
+                if (Object.keys(metrics.device_failures).length === 0) {
+                    deviceContainer.innerHTML = '<p class="text-muted">No device failures detected</p>';
+                } else {
+                    Object.entries(metrics.device_failures).forEach(([device, data]) => {
+                        const item = document.createElement('div');
+                        item.className = 'device-failure-item';
+                        item.innerHTML = `
+                            <strong>${device}</strong><br>
+                            <small>Failure Rate: ${data.failure_rate}% (${data.failed_sessions}/${data.total_sessions})</small>
+                        `;
+                        deviceContainer.appendChild(item);
+                    });
+                }
+                
+                // Update location failures
+                const locationContainer = document.getElementById('location-failures');
+                locationContainer.innerHTML = '';
+                
+                if (Object.keys(metrics.location_failures).length === 0) {
+                    locationContainer.innerHTML = '<p class="text-muted">No location failures detected</p>';
+                } else {
+                    Object.entries(metrics.location_failures).forEach(([location, data]) => {
+                        const item = document.createElement('div');
+                        item.className = 'location-failure-item';
+                        item.innerHTML = `
+                            <strong>${location}</strong><br>
+                            <small>Failure Rate: ${data.failure_rate}% | Avg Distance: ${data.avg_geofence_distance}m</small>
+                        `;
+                        locationContainer.appendChild(item);
+                    });
+                }
+            }
+        })
+        .catch(error => console.error('Error updating environmental panel:', error));
+}
+
+function updateOperationalSecurityPanel() {
+    fetch('/monitor/api/dtr/operational-security/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const metrics = data.data;
+                
+                // Update geofence precision
+                document.getElementById('geofence-distance').textContent = metrics.geofence_precision.avg_distance + 'm';
+                
+                // Update sync lag
+                document.getElementById('sync-lag').textContent = metrics.sync_performance.avg_sync_lag + 's';
+                
+                // Update API error rate
+                document.getElementById('api-error-rate').textContent = metrics.api_health.error_rate + '%';
+                
+                // Update liveness success rate
+                document.getElementById('liveness-success-rate').textContent = metrics.security_metrics.liveness_success_rate + '%';
+            }
+        })
+        .catch(error => console.error('Error updating operational panel:', error));
+}
+
+function updateHeatmap() {
+    fetch('/monitor/api/dtr/heatmap/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const container = document.getElementById('heatmap-container');
+                container.innerHTML = '';
+                
+                if (data.data.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No location data available</p>';
+                } else {
+                    data.data.forEach(location => {
+                        const item = document.createElement('div');
+                        item.className = 'heatmap-item';
+                        item.style.backgroundColor = location.performance_color;
+                        item.innerHTML = `
+                            <div>${location.location}</div>
+                            <small>${location.avg_time_to_punch}s</small><br>
+                            <small>${location.total_punches} punches</small>
+                        `;
+                        container.appendChild(item);
+                    });
+                }
+            }
+        })
+        .catch(error => console.error('Error updating heatmap:', error));
+}
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    updateDashboard();
+    refreshInterval = setInterval(updateDashboard, 30000); // Refresh every 30 seconds
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
+</script>
+{% endblock %}

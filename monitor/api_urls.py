@@ -16,6 +16,7 @@ from .auth_views import (
     mobile_login, mobile_logout, mobile_token_info, mobile_refresh_token,
     mobile_register, mobile_profile, mobile_update_profile, mobile_change_password
 )
+from . import dtr_monitoring_views
 
 # Create a router and register our viewsets
 router = DefaultRouter()
@@ -62,10 +63,22 @@ auth_urlpatterns = [
     path('profile/change-password/', mobile_change_password, name='mobile-change-password'),
 ]
 
+# DTR Biometric Monitoring URLs
+dtr_urlpatterns = [
+    path('accuracy-friction/', dtr_monitoring_views.dtr_accuracy_friction_panel, name='dtr_accuracy_friction'),
+    path('performance-latency/', dtr_monitoring_views.dtr_performance_latency_panel, name='dtr_performance_latency'),
+    path('environmental-hardware/', dtr_monitoring_views.dtr_environmental_hardware_panel, name='dtr_environmental_hardware'),
+    path('operational-security/', dtr_monitoring_views.dtr_operational_security_panel, name='dtr_operational_security'),
+    path('heatmap/', dtr_monitoring_views.dtr_heatmap_data, name='dtr_heatmap'),
+    path('ingest/', dtr_monitoring_views.dtr_ingest_mobile_metrics, name='dtr_ingest_metrics'),
+    path('overview/', dtr_monitoring_views.dtr_dashboard_overview, name='dtr_dashboard_overview'),
+]
+
 # Combine all API URLs
 urlpatterns = [
     path('auth/', include(auth_urlpatterns)),
     path('mobile/', include(mobile_urlpatterns)),
+    path('dtr/', include(dtr_urlpatterns)),
     path('', include(router.urls)),
     
     # Certificate-specific endpoints

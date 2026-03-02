@@ -151,4 +151,7 @@ urlpatterns = [
     path('api/v2/metrics/server/<int:server_id>/detailed/', views.server_detailed_metrics_api, name='server_detailed_metrics_api'),
     path('api/servers/<int:server_id>/directories/', views.update_server_directories, name='update_server_directories'),
     path('ssl-certificates/', views.ssl_certificates_list, name='ssl_certificates_list'),
+    
+    # DTR Biometric Monitoring
+    path('dtr-monitoring/', views.dtr_monitoring_dashboard, name='dtr_monitoring_dashboard'),
 ]
