@@ -3,6 +3,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Avg, Count, Q, F
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from datetime import timedelta
 import json
 from .models import DTRBiometricMetrics, DTRPunchSession, DTRDevicePerformance, DTRLocationMetrics
@@ -301,7 +302,9 @@ def _get_performance_color(avg_time):
 def dtr_ingest_mobile_metrics(request):
     """Ingest metrics from mobile app"""
     try:
+        print(f"Raw request body: {request.body}")  # Debug line
         data = json.loads(request.body)
+        print(f"Parsed data: {data}")  # Debug line
         
         # Create punch session record
         session = DTRPunchSession.objects.create(
@@ -329,7 +332,7 @@ def dtr_ingest_mobile_metrics(request):
             error_type=data.get('error_type'),
             error_message=data.get('error_message'),
             manual_override_required=data.get('manual_override_required', False),
-            local_timestamp=timezone.now(),  # Parse from data if available
+            local_timestamp=parse_datetime(data.get('local_timestamp')) if data.get('local_timestamp') else timezone.now(),
         )
         
         # Calculate sync lag

@@ -1,516 +1,1184 @@
 {% extends "monitor/base.html" %}
 
-{% block title %}DTR Biometric Monitoring Dashboard{% endblock %}
+{% block title %}DTR Biometric Intelligence Center{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Globals ─────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; }
+
+  .dtr-page {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* ── Page Header ─────────────────────────────────────────────────── */
+  .dtr-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .dtr-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .dtr-icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 0 20px rgba(99,102,241,0.4);
+    flex-shrink: 0;
+  }
+
+  .dtr-header-title h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #a5b4fc, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 2px;
+  }
+
+  .dtr-header-title p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .dtr-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #10b981;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  .last-updated {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  .btn-refresh {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.35);
+    border-radius: 8px;
+    color: #a5b4fc;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-refresh:hover {
+    background: rgba(99,102,241,0.3);
+    color: #c7d2fe;
+  }
+
+  .btn-refresh.spinning svg {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Section Titles ──────────────────────────────────────────────── */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── KPI Row ─────────────────────────────────────────────────────── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px)  { .kpi-row { grid-template-columns: 1fr; } }
+
+  .kpi-card {
+    background: rgba(255,255,255,0.027);
+    border: 1px solid rgba(255,255,255,0.065);
+    border-radius: 14px;
+    padding: 20px 22px 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+
+  .kpi-card:hover {
+    border-color: rgba(255,255,255,0.12);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .kpi-card.good::before  { background: linear-gradient(90deg, #10b981, #34d399); }
+  .kpi-card.warn::before  { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+  .kpi-card.crit::before  { background: linear-gradient(90deg, #ef4444, #f87171); }
+  .kpi-card.info::before  { background: linear-gradient(90deg, #6366f1, #a5b4fc); }
+
+  .kpi-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .kpi-value {
+    font-size: 2.4rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+    letter-spacing: -0.03em;
+  }
+
+  .kpi-card.good .kpi-value  { color: #34d399; }
+  .kpi-card.warn .kpi-value  { color: #fcd34d; }
+  .kpi-card.crit .kpi-value  { color: #f87171; }
+  .kpi-card.info .kpi-value  { color: #a5b4fc; }
+
+  .kpi-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .kpi-bar-track {
+    height: 4px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .kpi-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  .kpi-card.good .kpi-bar-fill  { background: linear-gradient(90deg, #10b981, #34d399); }
+  .kpi-card.warn .kpi-bar-fill  { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+  .kpi-card.crit .kpi-bar-fill  { background: linear-gradient(90deg, #ef4444, #f87171); }
+  .kpi-card.info .kpi-bar-fill  { background: linear-gradient(90deg, #6366f1, #a5b4fc); }
+
+  /* ── Two-column Grid ─────────────────────────────────────────────── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Three-column Grid ───────────────────────────────────────────── */
+  .three-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 900px) { .three-col { grid-template-columns: 1fr; } }
+
+  /* ── Panel Card ──────────────────────────────────────────────────── */
+  .panel {
+    background: rgba(255,255,255,0.022);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .panel-title .icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+
+  .icon-purple { background: rgba(139,92,246,0.2); color: #c084fc; }
+  .icon-green  { background: rgba(16,185,129,0.2); color: #34d399; }
+  .icon-blue   { background: rgba(59,130,246,0.2); color: #60a5fa; }
+  .icon-amber  { background: rgba(245,158,11,0.2); color: #fcd34d; }
+  .icon-red    { background: rgba(239,68,68,0.2);  color: #f87171; }
+  .icon-cyan   { background: rgba(6,182,212,0.2);  color: #67e8f9; }
+
+  .panel-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .panel-body { padding: 18px; }
+
+  /* ── Chart Wrapper ───────────────────────────────────────────────── */
+  .chart-wrap {
+    position: relative;
+    height: 190px;
+  }
+
+  .chart-wrap-sm {
+    position: relative;
+    height: 140px;
+  }
+
+  /* ── Metric Row (inside panel) ───────────────────────────────────── */
+  .stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .stat-row:last-child { border-bottom: none; }
+
+  .stat-label {
+    font-size: 0.77rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat-val {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .chip {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  .chip-good { background: rgba(16,185,129,0.15); color: #34d399; }
+  .chip-warn { background: rgba(245,158,11,0.15); color: #fcd34d; }
+  .chip-crit { background: rgba(239,68,68,0.15);  color: #f87171; }
+  .chip-info { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+
+  /* ── Network Badge ───────────────────────────────────────────────── */
+  .net-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 8px 14px;
+    margin: 4px 0;
+  }
+
+  .net-badge strong {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .net-badge small {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+  }
+
+  /* ── Heatmap tiles ───────────────────────────────────────────────── */
+  .heatmap-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 4px 0;
+    min-height: 80px;
+  }
+
+  .hm-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    padding: 14px 20px;
+    min-width: 120px;
+    flex: 1 0 120px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+
+  .hm-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  .hm-loc { font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.9); margin-bottom: 4px; text-align: center; }
+  .hm-time { font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 2px; line-height: 1; }
+  .hm-stat { font-size: 0.65rem; color: rgba(255,255,255,0.7); }
+
+  /* ── Device / Location table rows ───────────────────────────────── */
+  .rank-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .rank-row:last-child { border-bottom: none; }
+
+  .rank-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .rank-name {
+    flex: 1;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rank-rate {
+    font-size: 0.78rem;
+    font-weight: 600;
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .mini-bar-track {
+    width: 60px;
+    height: 5px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .mini-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.6s ease;
+  }
+
+  /* ── Security sentinel ───────────────────────────────────────────── */
+  .sentinel-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .sentinel-tile {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 11px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sentinel-tile-label {
+    font-size: 0.67rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+  }
+
+  .sentinel-tile-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .sentinel-tile-sub {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+  }
+
+  /* ── Empty state ─────────────────────────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
+  .empty-state span { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+
+  /* ── Loading shimmer ─────────────────────────────────────────────── */
+  .shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+    border-radius: 6px;
+    display: inline-block;
+  }
+
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+  /* ── Full-width last row ─────────────────────────────────────────── */
+  .full-row { margin-bottom: 20px; }
+
+  /* ── Liveness alert ──────────────────────────────────────────────── */
+  .liveness-spike {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.72rem;
+    color: #f87171;
+    margin-top: 8px;
+  }
+
+  .liveness-spike.visible { display: flex; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">
-                    <i class="fas fa-fingerprint"></i>
-                    DTR Biometric Monitoring Dashboard
-                </h1>
-                <div class="d-flex align-items-center">
-                    <span class="badge bg-primary me-2" id="last-update">Loading...</span>
-                    <button class="btn btn-sm btn-outline-light" onclick="updateDashboard()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            </div>
+<div class="dtr-page">
+
+  <!-- ── Header ────────────────────────────────────────────────────── -->
+  <header class="dtr-header">
+    <div class="dtr-header-left">
+      <div class="dtr-icon-wrap">🪪</div>
+      <div class="dtr-header-title">
+        <h1>DTR Biometric Monitor</h1>
+        <p>Face Recognition · Punch Sessions · Liveness · Sync</p>
+      </div>
+    </div>
+    <div class="dtr-header-right">
+      <div class="live-badge"><span class="live-dot"></span>Live · 30s</div>
+      <div class="last-updated" id="last-updated">—</div>
+      <button class="btn-refresh" id="btn-refresh" onclick="startRefresh()">
+        <svg id="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M1 20v-6M1 14a11 11 0 0 1 18.8-7.6L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Section: Accuracy & Friction ──────────────────────────────── -->
+  <div class="section-title">
+    <span>🎯</span> Accuracy &amp; Friction · Last 24 h
+  </div>
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi-card info" id="card-sessions">
+      <div class="kpi-label">📊 Total Sessions</div>
+      <div class="kpi-value" id="val-sessions">—</div>
+      <div class="kpi-meta">All punch attempts</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar-sessions" style="width:0%"></div></div>
+    </div>
+    <div class="kpi-card good" id="card-frr">
+      <div class="kpi-label">⚠️ False Rejection Rate</div>
+      <div class="kpi-value" id="val-frr">—</div>
+      <div class="kpi-meta">Threshold → &gt; 2% = critical</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar-frr" style="width:0%"></div></div>
+    </div>
+    <div class="kpi-card good" id="card-retry">
+      <div class="kpi-label">🔄 Avg Retries</div>
+      <div class="kpi-value" id="val-retry">—</div>
+      <div class="kpi-meta">Target → &lt; 1.5 attempts</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar-retry" style="width:0%"></div></div>
+    </div>
+    <div class="kpi-card good" id="card-manual">
+      <div class="kpi-label">🖐 Manual Override</div>
+      <div class="kpi-value" id="val-manual">—</div>
+      <div class="kpi-meta">Threshold → &gt; 5% = critical</div>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar-manual" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Liveness failures card (full-width standalone) -->
+  <div class="full-row">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-red">🛡</span> Liveness &amp; Anti-Spoofing</div>
+        <span class="panel-badge chip-info" id="badge-liveness">checking...</span>
+      </div>
+      <div class="panel-body">
+        <div class="three-col" style="margin-bottom:0">
+          <div class="sentinel-tile">
+            <div class="sentinel-tile-label">Liveness Failures (24h)</div>
+            <div class="sentinel-tile-value" id="val-liveness" style="color:#f87171">—</div>
+            <div class="sentinel-tile-sub">Spoofing attempts blocked</div>
+            <div class="liveness-spike" id="liveness-spike-alert">⚡ Spike detected — investigate</div>
+          </div>
+          <div class="sentinel-tile">
+            <div class="sentinel-tile-label">Liveness Success Rate</div>
+            <div class="sentinel-tile-value" id="val-liveness-rate" style="color:#34d399">—</div>
+            <div class="sentinel-tile-sub">Anti-spoofing effectiveness</div>
+          </div>
+          <div class="sentinel-tile">
+            <div class="sentinel-tile-label">Spoofing Detected</div>
+            <div class="sentinel-tile-value" id="val-spoofing" style="color:#f59e0b">—</div>
+            <div class="sentinel-tile-sub">Explicit spoof error_type count</div>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section: Performance & Latency ───────────────────────────── -->
+  <div class="section-title">
+    <span>⚡</span> Performance &amp; Latency
+  </div>
+  <div class="two-col" style="margin-bottom:20px">
+    <!-- Recognition Latency chart -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-blue">📶</span> Recognition Latency by Network</div>
+      </div>
+      <div class="panel-body">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px">
+          <div class="net-badge">
+            <span style="font-size:0.75rem;color:#34d399">📶 WiFi</span>
+            <strong id="val-wifi">—</strong>
+            <small>ms · target &lt;1 s</small>
+          </div>
+          <div class="net-badge">
+            <span style="font-size:0.75rem;color:#fcd34d">📱 4G</span>
+            <strong id="val-4g">—</strong>
+            <small>ms · target &lt;2 s</small>
+          </div>
+        </div>
+        <div class="chart-wrap-sm"><canvas id="chart-latency"></canvas></div>
+      </div>
     </div>
 
-    <!-- Accuracy & Friction Panel -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-secondary">
-                <div class="card-header d-flex justify-content-between align-items-center bg-dark">
-                    <h5 class="mb-0 text-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Accuracy & Friction Panel (Core Metrics)
-                    </h5>
-                    <small class="text-muted">Most important for user experience</small>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="metric-card bg-gradient" id="frr-card">
-                                <h6 class="metric-label">False Rejection Rate</h6>
-                                <h2 class="metric-value" id="frr-value">-</h2>
-                                <small class="metric-subtitle">Threshold: >2%</small>
-                                <div class="progress mt-2">
-                                    <div class="progress-bar" id="frr-progress" role="progressbar"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="metric-card bg-gradient" id="retry-card">
-                                <h6 class="metric-label">Avg Retry Count</h6>
-                                <h2 class="metric-value" id="retry-value">-</h2>
-                                <small class="metric-subtitle">Target: <1.5 attempts</small>
-                                <div class="progress mt-2">
-                                    <div class="progress-bar" id="retry-progress" role="progressbar"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="metric-card bg-gradient" id="liveness-card">
-                                <h6 class="metric-label">Liveness Failures</h6>
-                                <h2 class="metric-value" id="liveness-value">-</h2>
-                                <small class="metric-subtitle">Fraud detection</small>
-                                <div class="alert alert-warning mt-2" id="liveness-alert" style="display: none;">
-                                    <i class="fas fa-exclamation-triangle"></i> Sudden spike detected!
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="metric-card bg-gradient" id="manual-card">
-                                <h6 class="metric-label">Manual Override Rate</h6>
-                                <h2 class="metric-value" id="manual-value">-</h2>
-                                <small class="metric-subtitle">Threshold: >5%</small>
-                                <div class="progress mt-2">
-                                    <div class="progress-bar" id="manual-progress" role="progressbar"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Other perf metrics -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-amber">🚀</span> App Performance</div>
+      </div>
+      <div class="panel-body">
+        <div class="stat-row">
+          <div class="stat-label">App Startup Time</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="stat-val" id="val-startup">—</span>
+            <span class="chip" id="chip-startup">—</span>
+          </div>
         </div>
+        <div class="stat-row">
+          <div class="stat-label">Frame Drop Rate</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="stat-val" id="val-framedrop">—</span>
+            <span class="chip" id="chip-framedrop">—</span>
+          </div>
+        </div>
+        <div class="stat-row" style="margin-bottom:14px">
+          <div class="stat-label">Battery Drain / Punch</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="stat-val" id="val-battery">—</span>
+            <span class="chip" id="chip-battery">—</span>
+          </div>
+        </div>
+        <div class="chart-wrap-sm"><canvas id="chart-app-perf"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section: Environmental & Hardware ─────────────────────────── -->
+  <div class="section-title">
+    <span>📱</span> Device &amp; Location Performance
+  </div>
+  <div class="two-col" style="margin-bottom:20px">
+    <!-- Device failures -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-purple">📱</span> Device Failure Rates</div>
+        <span class="panel-badge chip-info" id="badge-devices">—</span>
+      </div>
+      <div class="panel-body">
+        <div id="device-list">
+          <div class="empty-state"><span>📱</span>Loading device data…</div>
+        </div>
+        <div class="chart-wrap-sm" style="margin-top:14px;display:none" id="wrap-chart-device"><canvas id="chart-device"></canvas></div>
+      </div>
     </div>
 
-    <!-- Performance & Latency Panel -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-secondary">
-                <div class="card-header bg-dark">
-                    <h5 class="mb-0 text-info">
-                        <i class="fas fa-tachometer-alt"></i>
-                        Performance & Latency Panel
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-light mb-3">Recognition Latency</h6>
-                            <div class="row">
-                                <div class="col-6">
-                                    <div class="performance-metric">
-                                        <span class="badge bg-success">WiFi</span>
-                                        <h4 class="text-light" id="wifi-latency">-</h4>
-                                        <small class="text-muted">Target: <1s</small>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="performance-metric">
-                                        <span class="badge bg-warning">4G</span>
-                                        <h4 class="text-light" id="mobile-latency">-</h4>
-                                        <small class="text-muted">Target: <2s</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="row">
-                                <div class="col-4">
-                                    <div class="performance-metric">
-                                        <h6 class="text-light">App Startup</h6>
-                                        <h4 class="text-light" id="startup-time">-</h4>
-                                        <small class="text-muted">Target: <3s</small>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="performance-metric">
-                                        <h6 class="text-light">Frame Drop Rate</h6>
-                                        <h4 class="text-light" id="frame-drop">-</h4>
-                                        <small class="text-muted">Target: 60fps</small>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="performance-metric">
-                                        <h6 class="text-light">Battery/Punch</h6>
-                                        <h4 class="text-light" id="battery-drain">-</h4>
-                                        <small class="text-muted">Target: <1%</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Location failures -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-green">📍</span> Location Failure Rates</div>
+        <span class="panel-badge chip-info" id="badge-locations">—</span>
+      </div>
+      <div class="panel-body">
+        <div id="location-list">
+          <div class="empty-state"><span>📍</span>Loading location data…</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section: Operational & Security ──────────────────────────── -->
+  <div class="section-title">
+    <span>🔒</span> Operational &amp; Security
+  </div>
+  <div class="three-col" style="margin-bottom:20px">
+    <!-- Geofence -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-cyan">🗺</span> Geofence Precision</div>
+        <span class="panel-badge" id="badge-geo">—</span>
+      </div>
+      <div class="panel-body">
+        <div class="sentinel-tile" style="margin-bottom:10px">
+          <div class="sentinel-tile-label">Avg Distance from Zone</div>
+          <div class="sentinel-tile-value" id="val-geo">—</div>
+          <div class="sentinel-tile-sub">Target: &lt; 50 m</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Precision Status</div>
+          <span class="chip" id="chip-geo-status">—</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Environmental & Hardware Panel -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card border-secondary">
-                <div class="card-header bg-dark">
-                    <h5 class="mb-0 text-primary">
-                        <i class="fas fa-mobile-alt"></i>
-                        Device Performance
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="device-failures"></div>
-                </div>
-            </div>
+    <!-- Sync lag -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-amber">🔄</span> Sync Performance</div>
+        <span class="panel-badge" id="badge-sync">—</span>
+      </div>
+      <div class="panel-body">
+        <div class="sentinel-tile" style="margin-bottom:10px">
+          <div class="sentinel-tile-label">Avg Sync Lag</div>
+          <div class="sentinel-tile-value" id="val-sync">—</div>
+          <div class="sentinel-tile-sub">Target: &lt; 30 s</div>
         </div>
-        <div class="col-md-6">
-            <div class="card border-secondary">
-                <div class="card-header bg-dark">
-                    <h5 class="mb-0 text-success">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Location Performance
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="location-failures"></div>
-                </div>
-            </div>
+        <div class="stat-row">
+          <div class="stat-label">Sync Status</div>
+          <span class="chip" id="chip-sync-status">—</span>
         </div>
+      </div>
     </div>
 
-    <!-- Operational & Security Panel -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-secondary">
-                <div class="card-header bg-dark">
-                    <h5 class="mb-0 text-danger">
-                        <i class="fas fa-shield-alt"></i>
-                        Operational & Security Panel
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="security-metric">
-                                <h6 class="text-light">Geofence Precision</h6>
-                                <h4 class="text-light" id="geofence-distance">-</h4>
-                                <small class="text-muted">Average distance from punch zone</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="security-metric">
-                                <h6 class="text-light">Sync Lag</h6>
-                                <h4 class="text-light" id="sync-lag">-</h4>
-                                <small class="text-muted">Local to server sync time</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="security-metric">
-                                <h6 class="text-light">API Error Rate</h6>
-                                <h4 class="text-light" id="api-error-rate">-</h4>
-                                <small class="text-muted">4XX/5XX errors</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="security-metric">
-                                <h6 class="text-light">Liveness Success Rate</h6>
-                                <h4 class="text-light" id="liveness-success-rate">-</h4>
-                                <small class="text-muted">Anti-spoofing effectiveness</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- API Health -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-red">🌐</span> API Health</div>
+        <span class="panel-badge" id="badge-api">—</span>
+      </div>
+      <div class="panel-body">
+        <div class="sentinel-tile" style="margin-bottom:10px">
+          <div class="sentinel-tile-label">API Error Rate</div>
+          <div class="sentinel-tile-value" id="val-api-err">—</div>
+          <div class="sentinel-tile-sub">4XX / 5XX errors — target &lt; 5%</div>
         </div>
-    </div>
-
-    <!-- Location Heatmap -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-secondary">
-                <div class="card-header bg-dark">
-                    <h5 class="mb-0 text-danger">
-                        <i class="fas fa-fire"></i>
-                        Location Performance Heatmap
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="heatmap-container" class="d-flex flex-wrap"></div>
-                </div>
-            </div>
+        <div class="stat-row">
+          <div class="stat-label">Health Status</div>
+          <span class="chip" id="chip-api-status">—</span>
         </div>
+        <div class="stat-row">
+          <div class="stat-label">Total API Requests</div>
+          <span class="stat-val" id="val-api-total">—</span>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 
-<style>
-.metric-card {
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    text-align: center;
-    border: none;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+  <!-- ── Section: Location Heatmap ─────────────────────────────────── -->
+  <div class="section-title">
+    <span>🔥</span> Location Performance Heatmap
+  </div>
+  <div class="full-row">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="icon icon-red">🗺</span> Punch Zone Heat Map</div>
+        <span style="font-size:0.68rem;color:var(--text-muted)">color = avg session time &nbsp;·&nbsp; 🟢 &lt;2s &nbsp;·&nbsp; 🟡 2-5s &nbsp;·&nbsp; 🔴 &gt;5s</span>
+      </div>
+      <div class="panel-body">
+        <div class="heatmap-grid" id="heatmap-grid">
+          <div class="empty-state" style="width:100%"><span>🔥</span>Loading heatmap…</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-.metric-card h6 {
-    font-size: 0.875rem;
-    opacity: 0.9;
-    font-weight: 500;
-}
+</div><!-- /dtr-page -->
 
-.metric-card h2 {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin: 0.5rem 0;
-}
-
-.metric-card .metric-subtitle {
-    opacity: 0.8;
-    font-size: 0.75rem;
-}
-
-.performance-metric {
-    text-align: center;
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-    background: var(--card-bg);
-}
-
-.security-metric {
-    text-align: center;
-    padding: 1.5rem;
-    background: var(--card-bg);
-    border-radius: 0.5rem;
-    border: 1px solid var(--border);
-}
-
-.device-failure-item, .location-failure-item {
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-    border-radius: 0.5rem;
-    border-left: 4px solid var(--danger);
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--text-primary);
-}
-
-.heatmap-item {
-    display: inline-block;
-    padding: 1.5rem;
-    margin: 0.5rem;
-    border-radius: 0.75rem;
-    color: white;
-    font-weight: bold;
-    text-align: center;
-    min-width: 140px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.progress {
-    height: 8px;
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
-.alert {
-    border: none;
-    border-radius: 0.5rem;
-}
-
-.card {
-    background: var(--card-bg);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-    border-bottom: 1px solid var(--border);
-}
-
-.bg-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-</style>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-// Auto-refresh every 30 seconds
-let refreshInterval;
+// ── Chart.js global defaults ────────────────────────────────────────
+Chart.defaults.color = '#71717a';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = 'Inter, sans-serif';
 
-function updateDashboard() {
-    // Show loading state
-    document.getElementById('last-update').textContent = 'Updating...';
-    
-    // Update all panels
-    updateAccuracyFrictionPanel();
-    updatePerformanceLatencyPanel();
-    updateEnvironmentalHardwarePanel();
-    updateOperationalSecurityPanel();
-    updateHeatmap();
-    
-    // Update last update time
-    document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
-}
+// ── Chart instances ──────────────────────────────────────────────────
+let chartLatency = null;
+let chartAppPerf = null;
+let chartDevice  = null;
 
-function updateAccuracyFrictionPanel() {
-    fetch('/monitor/api/dtr/accuracy-friction/')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const metrics = data.data;
-                
-                // Update FRR
-                document.getElementById('frr-value').textContent = metrics.false_rejection_rate + '%';
-                const frrProgress = document.getElementById('frr-progress');
-                frrProgress.style.width = Math.min(metrics.false_rejection_rate, 100) + '%';
-                frrProgress.className = 'progress-bar ' + (metrics.alerts.frr_critical ? 'bg-danger' : 'bg-success');
-                
-                // Update Retry Count
-                document.getElementById('retry-value').textContent = metrics.retry_count_avg;
-                const retryProgress = document.getElementById('retry-progress');
-                retryProgress.style.width = Math.min(metrics.retry_count_avg * 50, 100) + '%';
-                retryProgress.className = 'progress-bar ' + (metrics.alerts.retry_critical ? 'bg-danger' : 'bg-success');
-                
-                // Update Liveness Failures
-                document.getElementById('liveness-value').textContent = metrics.liveness_failures;
-                const livenessAlert = document.getElementById('liveness-alert');
-                livenessAlert.style.display = metrics.alerts.liveness_spike ? 'block' : 'none';
-                
-                // Update Manual Override
-                document.getElementById('manual-value').textContent = metrics.manual_override_rate + '%';
-                const manualProgress = document.getElementById('manual-progress');
-                manualProgress.style.width = Math.min(metrics.manual_override_rate, 100) + '%';
-                manualProgress.className = 'progress-bar ' + (metrics.alerts.manual_override_critical ? 'bg-danger' : 'bg-success');
-            }
-        })
-        .catch(error => {
-            console.error('Error updating accuracy panel:', error);
-            document.getElementById('last-update').textContent = 'Error loading data';
-        });
-}
+// ── Latency history buffers (last 10 refreshes) ──────────────────────
+const MAX_POINTS = 10;
+const latencyHistory = { labels: [], wifi: [], mobile4g: [] };
 
-function updatePerformanceLatencyPanel() {
-    fetch('/monitor/api/dtr/performance-latency/')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const metrics = data.data;
-                
-                // Update recognition latency
-                document.getElementById('wifi-latency').textContent = metrics.recognition_latency.wifi_avg + 'ms';
-                document.getElementById('mobile-latency').textContent = metrics.recognition_latency.mobile_avg + 'ms';
-                
-                // Update other metrics
-                document.getElementById('startup-time').textContent = metrics.app_startup_time + 'ms';
-                document.getElementById('frame-drop').textContent = metrics.frame_drop_rate + '%';
-                document.getElementById('battery-drain').textContent = metrics.battery_drain_per_punch + '%';
-            }
-        })
-        .catch(error => console.error('Error updating performance panel:', error));
-}
-
-function updateEnvironmentalHardwarePanel() {
-    fetch('/monitor/api/dtr/environmental-hardware/')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const metrics = data.data;
-                
-                // Update device failures
-                const deviceContainer = document.getElementById('device-failures');
-                deviceContainer.innerHTML = '';
-                
-                if (Object.keys(metrics.device_failures).length === 0) {
-                    deviceContainer.innerHTML = '<p class="text-muted">No device failures detected</p>';
-                } else {
-                    Object.entries(metrics.device_failures).forEach(([device, data]) => {
-                        const item = document.createElement('div');
-                        item.className = 'device-failure-item';
-                        item.innerHTML = `
-                            <strong>${device}</strong><br>
-                            <small>Failure Rate: ${data.failure_rate}% (${data.failed_sessions}/${data.total_sessions})</small>
-                        `;
-                        deviceContainer.appendChild(item);
-                    });
-                }
-                
-                // Update location failures
-                const locationContainer = document.getElementById('location-failures');
-                locationContainer.innerHTML = '';
-                
-                if (Object.keys(metrics.location_failures).length === 0) {
-                    locationContainer.innerHTML = '<p class="text-muted">No location failures detected</p>';
-                } else {
-                    Object.entries(metrics.location_failures).forEach(([location, data]) => {
-                        const item = document.createElement('div');
-                        item.className = 'location-failure-item';
-                        item.innerHTML = `
-                            <strong>${location}</strong><br>
-                            <small>Failure Rate: ${data.failure_rate}% | Avg Distance: ${data.avg_geofence_distance}m</small>
-                        `;
-                        locationContainer.appendChild(item);
-                    });
-                }
-            }
-        })
-        .catch(error => console.error('Error updating environmental panel:', error));
-}
-
-function updateOperationalSecurityPanel() {
-    fetch('/monitor/api/dtr/operational-security/')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const metrics = data.data;
-                
-                // Update geofence precision
-                document.getElementById('geofence-distance').textContent = metrics.geofence_precision.avg_distance + 'm';
-                
-                // Update sync lag
-                document.getElementById('sync-lag').textContent = metrics.sync_performance.avg_sync_lag + 's';
-                
-                // Update API error rate
-                document.getElementById('api-error-rate').textContent = metrics.api_health.error_rate + '%';
-                
-                // Update liveness success rate
-                document.getElementById('liveness-success-rate').textContent = metrics.security_metrics.liveness_success_rate + '%';
-            }
-        })
-        .catch(error => console.error('Error updating operational panel:', error));
-}
-
-function updateHeatmap() {
-    fetch('/monitor/api/dtr/heatmap/')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const container = document.getElementById('heatmap-container');
-                container.innerHTML = '';
-                
-                if (data.data.length === 0) {
-                    container.innerHTML = '<p class="text-muted">No location data available</p>';
-                } else {
-                    data.data.forEach(location => {
-                        const item = document.createElement('div');
-                        item.className = 'heatmap-item';
-                        item.style.backgroundColor = location.performance_color;
-                        item.innerHTML = `
-                            <div>${location.location}</div>
-                            <small>${location.avg_time_to_punch}s</small><br>
-                            <small>${location.total_punches} punches</small>
-                        `;
-                        container.appendChild(item);
-                    });
-                }
-            }
-        })
-        .catch(error => console.error('Error updating heatmap:', error));
-}
-
-// Initialize dashboard
-document.addEventListener('DOMContentLoaded', function() {
-    updateDashboard();
-    refreshInterval = setInterval(updateDashboard, 30000); // Refresh every 30 seconds
-});
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', function() {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
+function mkLineChart(ctx, labels, datasets) {
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: (c) => ` ${c.dataset.label}: ${c.parsed.y}`
+      }}},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 10 } } }
+      },
+      elements: { point: { radius: 3, hitRadius: 10 }, line: { tension: 0.35 } }
     }
-});
+  });
+}
+
+function mkBarChart(ctx, labels, values, colors) {
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors, borderRadius: 5, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 10 }, callback: (v) => v+'%' } }
+      }
+    }
+  });
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────
+function thresholdClass(val, warnVal, critVal, reversed = false) {
+  if (reversed) { // higher = better (e.g. success rate)
+    if (val >= warnVal) return 'good';
+    if (val >= critVal) return 'warn';
+    return 'crit';
+  }
+  if (val <= warnVal) return 'good';
+  if (val <= critVal) return 'warn';
+  return 'crit';
+}
+
+function setKPI(cardId, valId, barId, value, unit, barPct, cls) {
+  const card = document.getElementById(cardId);
+  const valEl = document.getElementById(valId);
+  const barEl = document.getElementById(barId);
+  if (!card || !valEl) return;
+  card.className = 'kpi-card ' + cls;
+  valEl.textContent = value + (unit || '');
+  if (barEl) barEl.style.width = Math.min(100, Math.max(0, barPct)) + '%';
+}
+
+function setChip(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'chip chip-' + cls;
+}
+
+function setPanelBadge(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'panel-badge chip-' + cls;
+}
+
+function timeLabel() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function addToHistory(arr, val) {
+  arr.push(val);
+  if (arr.length > MAX_POINTS) arr.shift();
+}
+
+// ── Panel 1 – Accuracy & Friction ────────────────────────────────────
+async function loadAccuracyFriction() {
+  try {
+    const res = await fetch('/api/dtr/accuracy-friction/');
+    const json = await res.json();
+    if (json.status !== 'success') return;
+    const d = json.data;
+
+    const frrCls  = thresholdClass(d.false_rejection_rate, 2, 5);
+    const retCls  = thresholdClass(d.retry_count_avg, 1.5, 3);
+    const manCls  = thresholdClass(d.manual_override_rate, 5, 10);
+
+    setKPI('card-sessions', 'val-sessions', 'bar-sessions', d.total_sessions, '', 100, 'info');
+    setKPI('card-frr',      'val-frr',      'bar-frr',      d.false_rejection_rate.toFixed(1), '%', d.false_rejection_rate / 0.1, frrCls);
+    setKPI('card-retry',    'val-retry',    'bar-retry',    d.retry_count_avg.toFixed(2), 'x', d.retry_count_avg * 33, retCls);
+    setKPI('card-manual',   'val-manual',   'bar-manual',   d.manual_override_rate.toFixed(1), '%', d.manual_override_rate / 0.1, manCls);
+  } catch (e) {
+    console.warn('accuracy/friction error', e);
+  }
+}
+
+// ── Panel 2 – Liveness (from operational-security) ───────────────────
+async function loadLiveness() {
+  try {
+    const [accRes, opsRes] = await Promise.all([
+      fetch('/api/dtr/accuracy-friction/'),
+      fetch('/api/dtr/operational-security/')
+    ]);
+    const acc = await accRes.json();
+    const ops = await opsRes.json();
+    if (acc.status === 'success') {
+      const lf = acc.data.liveness_failures;
+      document.getElementById('val-liveness').textContent = lf;
+      const spike = acc.data.alerts && acc.data.alerts.liveness_spike;
+      document.getElementById('liveness-spike-alert').classList.toggle('visible', !!spike);
+      setPanelBadge('badge-liveness', spike ? '⚡ Spike' : '✅ Normal', spike ? 'crit' : 'good');
+    }
+    if (ops.status === 'success') {
+      const sm = ops.data.security_metrics;
+      document.getElementById('val-liveness-rate').textContent = sm.liveness_success_rate + '%';
+      document.getElementById('val-spoofing').textContent = sm.spoofing_attempts_detected;
+    }
+  } catch (e) {
+    console.warn('liveness error', e);
+  }
+}
+
+// ── Panel 3 – Performance & Latency ──────────────────────────────────
+async function loadPerformance() {
+  try {
+    const res = await fetch('/api/dtr/performance-latency/');
+    const json = await res.json();
+    if (json.status !== 'success') return;
+    const d = json.data;
+
+    const wifiMs   = d.recognition_latency.wifi_avg;
+    const mobileMs = d.recognition_latency.mobile_avg;
+    const startMs  = d.app_startup_time;
+    const dropPct  = d.frame_drop_rate;
+    const batPct   = d.battery_drain_per_punch;
+
+    document.getElementById('val-wifi').textContent = wifiMs;
+    document.getElementById('val-4g').textContent   = mobileMs;
+    document.getElementById('val-startup').textContent   = startMs + ' ms';
+    document.getElementById('val-framedrop').textContent = dropPct + '%';
+    document.getElementById('val-battery').textContent   = batPct + '%';
+
+    setChip('chip-startup',   startMs  < 3000 ? '✅ Good' : '⚠ Slow',  startMs  < 3000 ? 'good' : 'warn');
+    setChip('chip-framedrop', dropPct  < 5    ? '✅ Good' : '⚠ Jank',  dropPct  < 5    ? 'good' : 'warn');
+    setChip('chip-battery',   batPct   < 1    ? '✅ Good' : '⚠ High',  batPct   < 1    ? 'good' : 'warn');
+
+    // Latency trend
+    addToHistory(latencyHistory.labels, timeLabel());
+    addToHistory(latencyHistory.wifi, wifiMs);
+    addToHistory(latencyHistory.mobile4g, mobileMs);
+
+    const ctxL = document.getElementById('chart-latency').getContext('2d');
+    if (!chartLatency) {
+      chartLatency = mkLineChart(ctxL, latencyHistory.labels, [
+        { label: 'WiFi (ms)',  data: latencyHistory.wifi,     borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.08)' },
+        { label: '4G (ms)',    data: latencyHistory.mobile4g, borderColor: '#fcd34d', backgroundColor: 'rgba(252,211,77,0.08)' }
+      ]);
+    } else {
+      chartLatency.data.labels = latencyHistory.labels;
+      chartLatency.data.datasets[0].data = latencyHistory.wifi;
+      chartLatency.data.datasets[1].data = latencyHistory.mobile4g;
+      chartLatency.update('none');
+    }
+
+    // App perf bar
+    const ctxP = document.getElementById('chart-app-perf').getContext('2d');
+    const targets = [d.performance_targets.startup_target, d.performance_targets.frame_drop_target * 100, d.performance_targets.battery_drain_target * 100];
+    const actuals = [startMs, dropPct * 100, batPct * 100];
+    const pcts    = actuals.map((v, i) => Math.min(100, (v / (targets[i] * 2)) * 100));
+    const colors  = pcts.map(p => p < 50 ? 'rgba(52,211,153,0.7)' : p < 85 ? 'rgba(252,211,77,0.7)' : 'rgba(248,113,113,0.7)');
+
+    if (!chartAppPerf) {
+      chartAppPerf = mkBarChart(ctxP, ['Startup', 'Frame Drop', 'Battery'], pcts, colors);
+    } else {
+      chartAppPerf.data.datasets[0].data = pcts;
+      chartAppPerf.data.datasets[0].backgroundColor = colors;
+      chartAppPerf.update('none');
+    }
+  } catch (e) {
+    console.warn('performance error', e);
+  }
+}
+
+// ── Panel 4 – Device & Location ───────────────────────────────────────
+async function loadEnvironmental() {
+  try {
+    const res = await fetch('/api/dtr/environmental-hardware/');
+    const json = await res.json();
+    if (json.status !== 'success') return;
+    const d = json.data;
+
+    // Device list
+    const deviceDiv = document.getElementById('device-list');
+    const devEntries = Object.entries(d.device_failures).sort((a,b) => b[1].failure_rate - a[1].failure_rate);
+    setPanelBadge('badge-devices', devEntries.length + ' models', 'info');
+
+    if (devEntries.length === 0) {
+      deviceDiv.innerHTML = '<div class="empty-state"><span>✅</span>No device failures</div>';
+    } else {
+      deviceDiv.innerHTML = devEntries.slice(0,8).map(([dev, data], i) => {
+        const rate = data.failure_rate;
+        const barColor = rate < 5 ? '#10b981' : rate < 15 ? '#f59e0b' : '#ef4444';
+        const chipCls  = rate < 5 ? 'good' : rate < 15 ? 'warn' : 'crit';
+        return `
+          <div class="rank-row">
+            <div class="rank-num">${i+1}</div>
+            <div class="rank-name" title="${dev}">${dev}</div>
+            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${rate}%;background:${barColor}"></div></div>
+            <div class="rank-rate" style="color:${barColor}">${rate.toFixed(1)}%</div>
+            <span class="chip chip-${chipCls}">${data.failed_sessions}/${data.total_sessions}</span>
+          </div>`;
+      }).join('');
+
+      // Device bar chart
+      const wrap = document.getElementById('wrap-chart-device');
+      wrap.style.display = devEntries.length > 0 ? 'block' : 'none';
+      const labels = devEntries.slice(0,6).map(([k]) => k.length > 12 ? k.slice(0,12)+'…' : k);
+      const vals   = devEntries.slice(0,6).map(([,v]) => v.failure_rate);
+      const cols   = vals.map(v => v < 5 ? 'rgba(16,185,129,0.7)' : v < 15 ? 'rgba(245,158,11,0.7)' : 'rgba(239,68,68,0.7)');
+      const ctxD = document.getElementById('chart-device').getContext('2d');
+      if (!chartDevice) {
+        chartDevice = mkBarChart(ctxD, labels, vals, cols);
+      } else {
+        chartDevice.data.labels = labels;
+        chartDevice.data.datasets[0].data = vals;
+        chartDevice.data.datasets[0].backgroundColor = cols;
+        chartDevice.update('none');
+      }
+    }
+
+    // Location list
+    const locDiv = document.getElementById('location-list');
+    const locEntries = Object.entries(d.location_failures).sort((a,b) => b[1].failure_rate - a[1].failure_rate);
+    setPanelBadge('badge-locations', locEntries.length + ' zones', 'info');
+
+    if (locEntries.length === 0) {
+      locDiv.innerHTML = '<div class="empty-state"><span>✅</span>No location failures</div>';
+    } else {
+      locDiv.innerHTML = locEntries.slice(0,8).map(([loc, data], i) => {
+        const rate = data.failure_rate;
+        const barColor = rate < 5 ? '#10b981' : rate < 15 ? '#f59e0b' : '#ef4444';
+        const chipCls  = rate < 5 ? 'good' : rate < 15 ? 'warn' : 'crit';
+        return `
+          <div class="rank-row">
+            <div class="rank-num">${i+1}</div>
+            <div class="rank-name" title="${loc}">${loc || '(unnamed)'}</div>
+            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${rate}%;background:${barColor}"></div></div>
+            <div class="rank-rate" style="color:${barColor}">${rate.toFixed(1)}%</div>
+            <span class="chip chip-${chipCls}">${data.avg_geofence_distance}m</span>
+          </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    console.warn('environmental error', e);
+  }
+}
+
+// ── Panel 5 – Operational & Security ─────────────────────────────────
+async function loadOperational() {
+  try {
+    const res = await fetch('/api/dtr/operational-security/');
+    const json = await res.json();
+    if (json.status !== 'success') return;
+    const d = json.data;
+
+    // Geo
+    const geoDist = d.geofence_precision.avg_distance;
+    document.getElementById('val-geo').textContent = geoDist + ' m';
+    const geoGood = d.geofence_precision.precision_status === 'good';
+    setChip('chip-geo-status', geoGood ? '✅ Precise' : '⚠ Off-zone', geoGood ? 'good' : 'warn');
+    setPanelBadge('badge-geo', geoGood ? 'On Target' : 'Review', geoGood ? 'good' : 'warn');
+
+    // Sync
+    const syncLag = d.sync_performance.avg_sync_lag;
+    document.getElementById('val-sync').textContent = syncLag + ' s';
+    const syncGood = d.sync_performance.sync_status === 'good';
+    setChip('chip-sync-status', syncGood ? '✅ Fast' : '⚠ Slow', syncGood ? 'good' : 'warn');
+    setPanelBadge('badge-sync', syncGood ? 'Healthy' : 'Slow', syncGood ? 'good' : 'warn');
+
+    // API Health
+    const apiErr = d.api_health.error_rate;
+    document.getElementById('val-api-err').textContent = apiErr + '%';
+    document.getElementById('val-api-total').textContent = d.api_health.total_requests;
+    const apiGood = d.api_health.health_status === 'healthy';
+    const apiCls  = apiErr < 5 ? 'good' : apiErr < 15 ? 'warn' : 'crit';
+    setChip('chip-api-status', apiGood ? '✅ Healthy' : apiErr < 15 ? '⚠ Degraded' : '🔴 Critical', apiCls);
+    setPanelBadge('badge-api', apiErr + '% errors', apiCls);
+  } catch (e) {
+    console.warn('operational error', e);
+  }
+}
+
+// ── Panel 6 – Heatmap ─────────────────────────────────────────────────
+async function loadHeatmap() {
+  try {
+    const res = await fetch('/api/dtr/heatmap/');
+    const json = await res.json();
+    const grid = document.getElementById('heatmap-grid');
+    if (json.status !== 'success' || json.data.length === 0) {
+      grid.innerHTML = '<div class="empty-state" style="width:100%"><span>🔥</span>No punch data yet.</div>';
+      return;
+    }
+    grid.innerHTML = json.data.map(loc => {
+      const t = loc.avg_time_to_punch;
+      let bgColor, emoji;
+      if (t < 2000)      { bgColor = 'linear-gradient(135deg,#065f46,#10b981)'; emoji = '🟢'; }
+      else if (t < 5000) { bgColor = 'linear-gradient(135deg,#78350f,#f59e0b)'; emoji = '🟡'; }
+      else               { bgColor = 'linear-gradient(135deg,#7f1d1d,#ef4444)'; emoji = '🔴'; }
+      return `
+        <div class="hm-tile" style="background:${bgColor}">
+          <div class="hm-loc">${emoji} ${loc.location || 'Unknown'}</div>
+          <div class="hm-time">${(t/1000).toFixed(1)}s</div>
+          <div class="hm-stat">${loc.total_punches} punches · ${loc.failure_rate.toFixed(1)}% fail</div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    console.warn('heatmap error', e);
+  }
+}
+
+// ── Master refresh ─────────────────────────────────────────────────────
+let refreshTimer;
+
+async function refreshAll() {
+  document.getElementById('btn-refresh').classList.add('spinning');
+  await Promise.allSettled([
+    loadAccuracyFriction(),
+    loadLiveness(),
+    loadPerformance(),
+    loadEnvironmental(),
+    loadOperational(),
+    loadHeatmap()
+  ]);
+  document.getElementById('last-updated').textContent = 'Updated ' + timeLabel();
+  document.getElementById('btn-refresh').classList.remove('spinning');
+}
+
+function startRefresh() {
+  clearInterval(refreshTimer);
+  refreshAll();
+  refreshTimer = setInterval(refreshAll, 30000);
+}
+
+document.addEventListener('DOMContentLoaded', startRefresh);
+window.addEventListener('beforeunload', () => clearInterval(refreshTimer));
 </script>
 {% endblock %}

@@ -1126,7 +1126,7 @@ class DTRPunchSession(models.Model):
     manual_override_required = models.BooleanField(default=False)
     
     # Sync Information
-    local_timestamp = models.DateTimeField()
+    local_timestamp = models.DateTimeField(null=True, blank=True)
     server_timestamp = models.DateTimeField(auto_now_add=True)
     sync_lag = models.FloatField(null=True, blank=True)
     
