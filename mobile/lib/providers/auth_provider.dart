@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dashboard_provider.dart';
+import '../core/api_client.dart';
 
 final authStateProvider = StateNotifierProvider<AuthNotifier, bool>((ref) {
   return AuthNotifier(ref);
