@@ -86,7 +86,7 @@ class ApiClient {
   // New method to fetch projects
   Future<List<Project>> fetchProjects() async {
     try {
-      final response = await _dio.get('/projects/');
+      final response = await _dio.get('projects/');
       if (response.statusCode == 200) {
         return (response.data as List).map((json) => Project.fromJson(json)).toList();
       } else {

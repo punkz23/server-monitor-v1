@@ -22,6 +22,6 @@ class ApiClientNotifier extends AsyncNotifier<ApiClient> {
 
 final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
   final client = ref.watch(apiClientProvider).value!;
-  final response = await client.dio.get('/mobile/dashboard/');
+  final response = await client.dio.get('mobile/dashboard/');
   return DashboardSummary.fromJson(response.data);
 });

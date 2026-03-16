@@ -4,7 +4,7 @@ import 'dashboard_provider.dart';
 
 final networkDevicesProvider = FutureProvider<List<NetworkDevice>>((ref) async {
   final client = ref.watch(apiClientProvider).value!;
-  final response = await client.dio.get('/mobile/network-devices/');
+  final response = await client.dio.get('mobile/network-devices/');
   
   final List<dynamic> data = response.data['devices'];
   return data.map((d) => NetworkDevice.fromJson(d)).toList();
@@ -18,7 +18,7 @@ class NetworkDeviceNotifier extends StateNotifier<AsyncValue<dynamic>> {
     state = const AsyncValue.loading();
     try {
       final client = ref.read(apiClientProvider).value!;
-      await client.dio.post('/mobile/network-devices/scan/');
+      await client.dio.post('mobile/network-devices/scan/');
       
       state = const AsyncValue.data(null);
       
@@ -45,7 +45,7 @@ class NetworkDeviceNotifier extends StateNotifier<AsyncValue<dynamic>> {
     state = const AsyncValue.loading();
     try {
       final client = ref.read(apiClientProvider).value!;
-      await client.dio.post('/mobile/network-devices/add/', data: {
+      await client.dio.post('mobile/network-devices/add/', data: {
         'name': name,
         'ip_address': ipAddress,
         'device_type': type,
@@ -64,7 +64,7 @@ class NetworkDeviceNotifier extends StateNotifier<AsyncValue<dynamic>> {
     state = const AsyncValue.loading();
     try {
       final client = ref.read(apiClientProvider).value!;
-      await client.dio.post('/mobile/network-devices/clear/');
+      await client.dio.post('mobile/network-devices/clear/');
       
       ref.invalidate(networkDevicesProvider);
       state = const AsyncValue.data(null);

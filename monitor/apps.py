@@ -11,24 +11,27 @@ class MonitorConfig(AppConfig):
 
     def ready(self):
         """Called when the app is ready"""
-        # Import here to avoid circular imports
-        from monitor.services.server_status_monitor import start_automated_monitoring
-        
-        # Start certificate monitoring scheduler
-        self.start_certificate_scheduler()
-        
-        # Start automated monitoring in production
-        # Note: This will run when Django starts up
-        try:
-            # Only start in production/when explicitly enabled
-            import os
-            if os.environ.get('DJANGO_SETTINGS_MODULE') == 'serverwatch.settings':
-                # Uncomment the line below to enable automatic monitoring on startup
-                start_automated_monitoring()
-                pass
-        except Exception as e:
-            # Don't let monitoring startup errors break the app
-            print(f"Warning: Could not start automated monitoring: {e}")
+        import os
+        # Only start the scheduler in the main process (not the reloader)
+        # RUN_MAIN is set by Django when it's the actual running process, not the reloader wrapper
+        if os.environ.get('RUN_MAIN') == 'true' or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            # Import here to avoid circular imports
+            from monitor.services.server_status_monitor import start_automated_monitoring
+            
+            # Start certificate monitoring scheduler
+            self.start_certificate_scheduler()
+            
+            # Start automated monitoring in production
+            # Note: This will run when Django starts up
+            try:
+                # Only start in production/when explicitly enabled
+                if os.environ.get('DJANGO_SETTINGS_MODULE') == 'serverwatch.settings':
+                    # Uncomment the line below to enable automatic monitoring on startup
+                    start_automated_monitoring()
+                    pass
+            except Exception as e:
+                # Don't let monitoring startup errors break the app
+                print(f"Warning: Could not start automated monitoring: {e}")
 
     def start_certificate_scheduler(self):
         """Start a background thread for certificate checking"""
