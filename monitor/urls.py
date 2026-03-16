@@ -1,9 +1,10 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 from . import api_views_metrics
 from . import views_ssh_credentials
 from . import agent_views
 from . import agent_deployment_views
+from . import versioned_api_urls
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
@@ -151,6 +152,9 @@ urlpatterns = [
     path('api/v2/metrics/server/<int:server_id>/detailed/', views.server_detailed_metrics_api, name='server_detailed_metrics_api'),
     path('api/servers/<int:server_id>/directories/', views.update_server_directories, name='update_server_directories'),
     path('ssl-certificates/', views.ssl_certificates_list, name='ssl_certificates_list'),
+    
+    # API endpoints
+    path('api/', include(versioned_api_urls.urlpatterns)),
     
     # DTR Biometric Monitoring
     path('dtr-monitoring/', views.dtr_monitoring_dashboard, name='dtr_monitoring_dashboard'),

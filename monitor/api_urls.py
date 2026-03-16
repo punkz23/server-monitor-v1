@@ -71,6 +71,8 @@ dtr_urlpatterns = [
     path('operational-security/', dtr_monitoring_views.dtr_operational_security_panel, name='dtr_operational_security'),
     path('heatmap/', dtr_monitoring_views.dtr_heatmap_data, name='dtr_heatmap'),
     path('ingest/', dtr_monitoring_views.dtr_ingest_mobile_metrics, name='dtr_ingest_metrics'),
+    path('delete-employee-records/', dtr_monitoring_views.dtr_delete_employee_records, name='dtr_delete_employee_records'),
+    path('active-employees/', dtr_monitoring_views.dtr_get_active_employees, name='dtr_get_active_employees'),
     path('overview/', dtr_monitoring_views.dtr_dashboard_overview, name='dtr_dashboard_overview'),
 ]
 

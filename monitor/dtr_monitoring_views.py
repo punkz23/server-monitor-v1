@@ -373,6 +373,60 @@ def dtr_ingest_mobile_metrics(request):
         }, status=400)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def dtr_delete_employee_records(request):
+    """Delete all punch records for a specific employee for the current day (Testing only)"""
+    try:
+        data = json.loads(request.body)
+        employee_id = data.get('employee_id')
+        
+        if not employee_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Employee ID is required'
+            }, status=400)
+            
+        today = timezone.now().date()
+        deleted_count, _ = DTRPunchSession.objects.filter(
+            employee_id=employee_id,
+            timestamp__date=today
+        ).delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Successfully deleted {deleted_count} records for employee {employee_id} for today ({today})'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def dtr_get_active_employees(request):
+    """Get list of employees who have punched today for search/autocomplete"""
+    try:
+        today = timezone.now().date()
+        employees = DTRPunchSession.objects.filter(
+            timestamp__date=today
+        ).values('employee_id').annotate(
+            count=Count('id')
+        ).order_by('employee_id')
+        
+        return JsonResponse({
+            'status': 'success',
+            'data': list(employees)
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
 @require_http_methods(["GET"])
 def dtr_dashboard_overview(request):
     """Get all dashboard data in one call"""
