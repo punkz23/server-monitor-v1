@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/api_client.dart';
 import '../models/alert.dart';
 import 'dashboard_provider.dart';
 

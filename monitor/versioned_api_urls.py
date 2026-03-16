@@ -18,6 +18,7 @@ from .auth_views import (
 )
 from .v1_urls import urlpatterns as v1_urlpatterns
 from .v2_urls import urlpatterns as v2_urlpatterns
+from . import api_urls
 
 # API version information
 API_VERSIONS = {
@@ -195,6 +196,9 @@ urlpatterns = [
     
     # Authentication endpoints (non-versioned)
     path('auth/', include(auth_urlpatterns)),
+    
+    # DTR Biometric Monitoring endpoints (non-versioned)
+    path('dtr/', include(api_urls.dtr_urlpatterns)),
     
     # Versioned endpoints
     path('', include(versioned_urlpatterns)),

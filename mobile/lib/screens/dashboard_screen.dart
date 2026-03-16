@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/dtr_metrics_widget.dart';
 import 'package:intl/intl.dart';
 import 'settings_screen.dart'; // Import the new settings screen
 
@@ -89,6 +90,8 @@ class DashboardScreen extends ConsumerWidget {
                 _buildSectionTitle('Infrastructure Health'),
                 const SizedBox(height: 12),
                 _buildTypeBreakdown(summary),
+                const SizedBox(height: 24),
+                const DtrMetricsWidget(),
                 const SizedBox(height: 24),
                 _buildSectionTitle('Recent Alerts'),
                 const SizedBox(height: 12),

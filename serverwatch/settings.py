@@ -229,6 +229,25 @@ CORS_ALLOWED_HEADERS = [
     'x-requested-with',
 ]
 
+# Login URL configuration
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+# Session configuration
+SESSION_COOKIE_AGE = 3600  # 1 hour in seconds
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# CORS_ALLOW_METHODS = [
+#     'delete',
+#     'get',
+#     'options',
+#     'patch',
+#     'post',
+#     'put',
+# ]
+
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',

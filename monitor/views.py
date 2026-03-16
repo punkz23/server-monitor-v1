@@ -3620,3 +3620,9 @@ def update_server_directories(request, server_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
+
+@login_required
+def dtr_monitoring_dashboard(request):
+    """DTR Biometric Monitoring Dashboard"""
+    return render(request, 'monitor/dtr_monitoring_dashboard.html')
+

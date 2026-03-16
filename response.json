@@ -1,0 +1,1 @@
+{"status": "success", "data": {"false_rejection_rate": 0, "retry_count_avg": 0, "liveness_failures": 0, "manual_override_rate": 0, "total_sessions": 0, "critical_thresholds": {"frr_threshold": 2.0, "retry_threshold": 1.5, "manual_override_threshold": 5.0}}}
