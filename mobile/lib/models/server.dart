@@ -14,6 +14,7 @@ class Server {
   final double? ramPercent;
   final int? latencyMs;
   final DateTime? lastChecked;
+  final DateTime? lastResourceChecked;
 
   // Directory Watch fields
   final String? watchDirectory;
@@ -38,6 +39,7 @@ class Server {
     this.ramPercent,
     this.latencyMs,
     this.lastChecked,
+    this.lastResourceChecked,
     this.watchDirectory,
     this.latestFolderName,
     this.latestFolderFiles,
@@ -62,6 +64,7 @@ class Server {
       ramPercent: _toDouble(json['last_ram_percent']),
       latencyMs: json['last_latency_ms'],
       lastChecked: json['last_checked'] != null ? DateTime.parse(json['last_checked']) : null,
+      lastResourceChecked: json['last_resource_checked'] != null ? DateTime.parse(json['last_resource_checked']) : null,
       watchDirectory: json['watch_directory'],
       latestFolderName: json['latest_folder_name'],
       latestFolderFiles: json['latest_folder_files'],

@@ -140,7 +140,9 @@ class _ServerListScreenState extends ConsumerState<ServerListScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              server.lastChecked != null ? timeago.format(server.lastChecked!) : '-',
+              server.lastResourceChecked != null 
+                  ? timeago.format(server.lastResourceChecked!) 
+                  : (server.lastChecked != null ? timeago.format(server.lastChecked!) : '-'),
               style: const TextStyle(color: Colors.white24, fontSize: 10),
             ),
           ],
