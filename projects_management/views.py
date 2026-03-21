@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 from .models import Project, Server
 from .serializers import ProjectSerializer, ServerSerializer, GitPullSerializer, CustomCommandSerializer
@@ -10,6 +11,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class ProjectListView(APIView):
+    permission_classes = [AllowAny]  # Allow unauthenticated access to projects list
+    
     def get(self, request):
         projects = Project.objects.all()
         serializer = ProjectSerializer(projects, many=True)
