@@ -3,7 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class DtrApiConfig {
   // Production API Configuration
-  static const String _baseUrl = 'https://www.api.dailyoverland.com/dtr_api';
+  static const String _baseUrl = 'https://www.api.dailyoverland.com/dtr_api/';
   static const String _apiKey = 'bd1a4793b63255f34f845a82a798e9160cc69274b9289f8abc1020b0e158dfaa';
   
   // Environment-specific configuration

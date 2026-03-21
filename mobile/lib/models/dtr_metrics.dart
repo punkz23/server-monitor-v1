@@ -40,4 +40,17 @@ class DtrMetrics {
       'last_updated': lastUpdated.toIso8601String(),
     };
   }
+
+  // Factory constructor for empty metrics when API is unavailable
+  factory DtrMetrics.empty() {
+    return DtrMetrics(
+      activeUsers: 0,
+      totalClockIns: 0,
+      totalClockOuts: 0,
+      lateArrivals: 0,
+      overtimeHours: 0.0,
+      systemHealthy: false,
+      lastUpdated: DateTime.now(),
+    );
+  }
 }

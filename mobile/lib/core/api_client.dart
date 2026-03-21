@@ -8,15 +8,16 @@ import '../config/dtr_api_config.dart'; // Import DTR API config
 
 class ApiClient {
   static const String _baseUrlKey = 'api_base_url';
-  static const String _defaultBaseUrl = 'http://192.168.253.31:8001/api';
-  static const String _dtrApiBaseUrl = 'https://www.api.dailyoverland.com/dtr_api';
+  static const String _defaultBaseUrl = 'http://192.168.253.31:8001/api/';
+  static const String _dtrApiBaseUrl = 'https://www.api.dailyoverland.com/dtr_api/';
 
   late Dio _dio;
   late Dio _dtrDio; // Separate Dio instance for DTR API
   late String _baseUrl;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  ApiClient._internal(this._baseUrl) {
+  ApiClient._internal(String url) {
+    _baseUrl = url.endsWith('/') ? url : '$url/';
     _dio = Dio(BaseOptions(baseUrl: _baseUrl));
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -131,11 +132,15 @@ class ApiClient {
   // DTR API methods
   Future<DtrMetrics> getDtrMetrics() async {
     try {
-      final response = await _dtrDio.get('/dtr/metrics');
+      final response = await _dtrDio.get('dtr/metrics');
       if (response.statusCode == 200) {
         return DtrMetrics.fromJson(response.data);
       }
     } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // Endpoint doesn't exist - return empty metrics
+        return DtrMetrics.empty();
+      }
       throw Exception('Failed to fetch DTR metrics: ${e.message}');
     }
     throw Exception('Failed to fetch DTR metrics');
@@ -143,7 +148,7 @@ class ApiClient {
 
   Future<List<DtrLogEntry>> getDtrLogs({int limit = 50}) async {
     try {
-      final response = await _dtrDio.get('/dtr/logs', queryParameters: {'limit': limit});
+      final response = await _dtrDio.get('dtr/logs', queryParameters: {'limit': limit});
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data is Map 
             ? response.data['data'] ?? []
@@ -158,14 +163,18 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getDtrSystemHealth() async {
     try {
-      final response = await _dtrDio.get('/face-verification/health');
+      final response = await _dtrDio.get('face-verification/health');
       if (response.statusCode == 200) {
         return response.data;
       }
     } on DioException catch (e) {
+      if (e.response?.statusCode == 404 || e.response?.statusCode == 500) {
+        // Endpoint doesn't exist or server error - return empty health
+        return {'status': 'unavailable', 'message': 'DTR system health check unavailable'};
+      }
       throw Exception('Failed to fetch DTR system health: ${e.message}');
     }
-    return {};
+    return {'status': 'unavailable', 'message': 'DTR system health check unavailable'};
   }
 
   // New method to fetch projects
