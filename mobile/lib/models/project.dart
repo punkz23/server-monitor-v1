@@ -1,3 +1,5 @@
+import 'pull_request.dart';
+
 class Server {
   final int id;
   final String hostname;
@@ -25,6 +27,17 @@ class Server {
       updatedAt: DateTime.parse(json['updated_at']),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'hostname': hostname,
+      'user': user,
+      'path': path,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
 }
 
 class Project {
@@ -34,6 +47,7 @@ class Project {
   final List<Server> servers;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final ProjectStatus? status; // Optional status information
 
   Project({
     required this.id,
@@ -42,6 +56,7 @@ class Project {
     required this.servers,
     required this.createdAt,
     required this.updatedAt,
+    this.status,
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
@@ -55,6 +70,19 @@ class Project {
       servers: servers,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+      status: json['status'] != null ? ProjectStatus.fromJson(json['status']) : null,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'repo_url': repoUrl,
+      'servers': servers.map((server) => server.toJson()).toList(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'status': status?.toJson(),
+    };
   }
 }

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/project.dart'; // Import Project model
 import '../models/dtr_metrics.dart'; // Import DTR metrics model
 import '../models/dtr_log_entry.dart'; // Import DTR log entry model
+import '../models/pull_request.dart'; // Import Pull Request models
 import '../config/dtr_api_config.dart'; // Import DTR API config
 
 class ApiClient {
@@ -194,6 +195,67 @@ class ApiClient {
     } on DioException catch (e) {
       // Re-throw to be handled by Riverpod provider
       throw Exception('Failed to fetch projects: ${e.message}');
+    }
+  }
+
+  // Method to fetch project status with pull request information
+  Future<ProjectStatus> fetchProjectStatus(int projectId) async {
+    try {
+      final response = await _dio.get('projects/$projectId/status/');
+      if (response.statusCode == 200) {
+        return ProjectStatus.fromJson(response.data);
+      } else {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: 'Failed to load project status with status: ${response.statusCode}',
+        );
+      }
+    } on DioException catch (e) {
+      throw Exception('Failed to fetch project status: ${e.message}');
+    }
+  }
+
+  // Method to fetch pull requests for a project
+  Future<List<PullRequest>> fetchPullRequests(int projectId, {String? status, DateTime? date}) async {
+    try {
+      Map<String, dynamic> queryParams = {};
+      if (status != null) queryParams['status'] = status;
+      if (date != null) queryParams['date'] = date.toIso8601String().split('T')[0];
+
+      final response = await _dio.get('projects/$projectId/pull-requests/', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        return (response.data as List).map((json) => PullRequest.fromJson(json)).toList();
+      } else {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: 'Failed to load pull requests with status: ${response.statusCode}',
+        );
+      }
+    } on DioException catch (e) {
+      throw Exception('Failed to fetch pull requests: ${e.message}');
+    }
+  }
+
+  // Method to fetch today's pull requests for a project
+  Future<List<PullRequest>> fetchTodayPullRequests(int projectId) async {
+    try {
+      final response = await _dio.get('projects/$projectId/pull-requests/today/');
+      if (response.statusCode == 200) {
+        return (response.data as List).map((json) => PullRequest.fromJson(json)).toList();
+      } else {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: 'Failed to load today\'s pull requests with status: ${response.statusCode}',
+        );
+      }
+    } on DioException catch (e) {
+      throw Exception('Failed to fetch today\'s pull requests: ${e.message}');
     }
   }
 }

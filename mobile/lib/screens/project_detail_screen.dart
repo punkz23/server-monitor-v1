@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/project.dart';
+import '../widgets/project_status_widget.dart'; // Import the status widget
+import 'pull_requests_screen.dart'; // Import the pull requests screen
 // For refreshing projects if needed
 // For API calls
 import '../providers/dashboard_provider.dart'; // Import for apiClientProvider
@@ -40,7 +42,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
       final apiClient = ref.read(apiClientProvider).value!; // Use .value! for sync access after future is resolved by Riverpod
       final serverIds = _selectedServers.map((s) => s.id).toList();
       final response = await apiClient.dio.post(
-        '/projects/${widget.project.id}/git-pull/',
+        'projects/${widget.project.id}/git-pull/',
         data: {'server_ids': serverIds},
       );
 
@@ -123,7 +125,7 @@ ${result['stderr']}
       final apiClient = ref.read(apiClientProvider).value!; // Use .value! for sync access after future is resolved by Riverpod
       final serverIds = _selectedServers.map((s) => s.id).toList();
       final response = await apiClient.dio.post(
-        '/projects/${widget.project.id}/run-command/',
+        'projects/${widget.project.id}/run-command/',
         data: {'server_ids': serverIds, 'command': command},
       );
 
@@ -174,8 +176,16 @@ ${result['stderr']}
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Project Status Widget
+            ProjectStatusWidget(projectId: widget.project.id),
+            
+            const SizedBox(height: 20),
+            
+            // Project Details
             Text('Repo URL: ${widget.project.repoUrl}', style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 20),
+            
+            // Servers Section
             Text('Servers (${widget.project.servers.length}):', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             ...widget.project.servers.map((server) {
@@ -193,7 +203,10 @@ ${result['stderr']}
                 },
               );
             }).toList(),
+            
             const SizedBox(height: 20),
+            
+            // Action Buttons
             Row(
               children: [
                 Expanded(
@@ -213,7 +226,36 @@ ${result['stderr']}
                 ),
               ],
             ),
+            
+            const SizedBox(height: 12),
+            
+            // Pull Requests Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PullRequestsScreen(
+                        projectId: widget.project.id,
+                        projectName: widget.project.name,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.merge_type),
+                label: const Text('View All Pull Requests'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            
             const SizedBox(height: 20),
+            
+            // Command Output
             if (_isLoading || _commandOutput.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(12),
