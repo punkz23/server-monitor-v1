@@ -158,4 +158,7 @@ urlpatterns = [
     
     # DTR Biometric Monitoring
     path('dtr-monitoring/', views.dtr_monitoring_dashboard, name='dtr_monitoring_dashboard'),
+    
+    # Infra Wiki
+    path('infra-wiki/', views.infra_wiki, name='infra_wiki'),
 ]

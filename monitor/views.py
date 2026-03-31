@@ -56,6 +56,14 @@ from .services.firewall_interface_monitor import FirewallInterfaceMonitor
 from monitor.services.ssl_cache_service import get_cached_ssl_certificates
 
 
+@login_required
+def infra_wiki(request):
+    """
+    Renders the ISCE Infrastructure Wiki page.
+    """
+    return render(request, 'monitor/isce-infra-wiki.html')
+
+
 def _parse_range_param(range_param: str):
     range_param = (range_param or "30").strip().lower()
     max_points = 2000

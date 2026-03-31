@@ -257,8 +257,10 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
-# CORS settings for API endpoints
-CORS_URLS_REGEX = r'^/api/.*$'
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN = '8256372820:AAGAZ8-N38IkxKNJQM-DyYiW5qqt3mFtoz8'
+TELEGRAM_CHAT_ID = '5824022964'
+
 
 # Allow preflight requests for authentication endpoints
 CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours

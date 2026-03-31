@@ -6,12 +6,14 @@ import sys
 import time
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import threading
 import urllib.request
 import urllib.error
 import subprocess
+import ssl
+import OpenSSL.crypto
 
 import psutil
 import requests
@@ -636,8 +638,7 @@ class ServerAgent:
                 metrics["directory_watch"] = None
 
             # 8. SSL Metrics
-            ssl_certs = self.discover_ssl_certificates()
-            metrics["ssl_metrics"] = self.get_ssl_metrics(ssl_certs)
+            metrics["ssl_metrics"] = self.get_ssl_metrics(self.config.get("monitored_ssl_certs", []))
 
             return metrics
         except Exception as e:
@@ -670,16 +671,36 @@ class ServerAgent:
                     self.logger.debug(f"Error discovering certs in {base_path}: {e}")
         return found_certs
 
-    def get_ssl_metrics(self, paths, timeout=10):
-        """Get metrics for SSL certificates at given paths using openssl command"""
+    def _get_remote_ssl_certificate(self, domain, skip_ssl_verification, timeout=10):
+        """Get SSL certificate from remote server"""
+        try:
+            context = ssl.create_default_context()
+            if skip_ssl_verification:
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+
+            with socket.create_connection((domain, 443), timeout=timeout) as sock:
+                with context.wrap_socket(sock, server_hostname=domain) as ssock:
+                    cert_der = ssock.getpeercert(binary_form=True)
+                    cert_pem = ssl.DER_cert_to_PEM_cert(cert_der)
+                    return cert_pem
+        except Exception as e:
+            self.logger.error(f"Error getting remote SSL certificate for {domain}: {e}")
+            return None
+
+    def get_ssl_metrics(self, monitored_ssl_certs, timeout=10):
+        """Get metrics for SSL certificates from monitored domains"""
         results = []
-        for path in paths:
-            if not os.path.exists(path):
-                self.logger.warning(f"SSL certificate path {path} does not exist.")
+        for cert_config in monitored_ssl_certs:
+            domain = cert_config.get("domain")
+            skip_ssl_verification = cert_config.get("skip_ssl_verification", False)
+
+            if not domain:
+                self.logger.warning(f"Skipping SSL certificate check due to missing domain in config: {cert_config}")
                 continue
-                
+
             cert_info = {
-                "path": path,
+                "domain": domain,
                 "common_name": None,
                 "expiry_date": None,
                 "days_remaining": None,
@@ -687,58 +708,33 @@ class ServerAgent:
                 "status": "error",
                 "error": None
             }
-            
-            try:
-                # 1. Get expiry date
-                cmd_expiry = f"openssl x509 -enddate -noout -in {path}"
-                proc = subprocess.run(cmd_expiry, shell=True, capture_output=True, text=True, timeout=timeout)
-                if proc.returncode == 0:
-                    # Output: notAfter=Jan 27 23:59:59 2027 GMT
-                    line = proc.stdout.strip()
-                    if "notAfter=" in line:
-                        date_str = line.split("notAfter=")[1]
-                        cert_info["expiry_date"] = date_str
-                        # Parse date to calculate days remaining
-                        # Format: Jan 27 23:59:59 2027 GMT
-                        try:
-                            # Strip GMT if present for strptime
-                            clean_date = date_str.replace("GMT", "").strip()
-                            expiry_dt = datetime.strptime(clean_date, "%b %d %H:%M:%S %Y")
-                            diff = expiry_dt - datetime.utcnow()
-                            cert_info["days_remaining"] = diff.days
-                        except Exception as e:
-                            self.logger.warning(f"Error parsing expiry date for {path}: {e}")
-                else:
-                    cert_info["error"] = f"OpenSSL expiry command failed: {proc.stderr.strip()}"
-                
-                # 2. Get Subject and Issuer
-                cmd_meta = f"openssl x509 -subject -issuer -noout -in {path}"
-                proc = subprocess.run(cmd_meta, shell=True, capture_output=True, text=True, timeout=timeout)
-                if proc.returncode == 0:
-                    # Output: 
-                    # subject=CN = example.com
-                    # issuer=C = US, O = Let's Encrypt, CN = R3
-                    lines = proc.stdout.strip().splitlines()
-                    for line in lines:
-                        if "subject=" in line:
-                            if "CN =" in line:
-                                cert_info["common_name"] = line.split("CN =")[1].split(",")[0].strip()
-                        if "issuer=" in line:
-                            if "O =" in line:
-                                cert_info["issuer"] = line.split("O =")[1].split(",")[0].strip()
-                            elif "CN =" in line:
-                                cert_info["issuer"] = line.split("CN =")[1].split(",")[0].strip()
-                else:
-                    cert_info["error"] = f"OpenSSL meta command failed: {proc.stderr.strip()}"
 
-                if not cert_info["error"]:
+            try:
+                cert_pem = self._get_remote_ssl_certificate(domain, skip_ssl_verification, timeout)
+
+                if cert_pem:
+                    # Parse certificate data
+                    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_pem)
+
+                    # Extract expiry date
+                    not_after = datetime.strptime(cert.get_notAfter().decode('ascii'), '%Y%m%d%H%M%SZ').replace(tzinfo=timezone.utc)
+                    cert_info["expiry_date"] = not_after.isoformat()
+                    cert_info["days_remaining"] = (not_after - timezone.now()).days
+
+                    # Extract common name and issuer
+                    cert_info["common_name"] = cert.get_subject().CN or 'Unknown'
+                    cert_info["issuer"] = cert.get_issuer().CN or 'Unknown'
+                    
+                    # Assume success if we got and parsed the cert
                     cert_info["status"] = "ok"
-            except subprocess.TimeoutExpired:
-                cert_info["error"] = f"OpenSSL command for {path} timed out"
+                    cert_info["error"] = None
+                else:
+                    cert_info["error"] = "Failed to retrieve remote certificate"
+
             except Exception as e:
+                self.logger.error(f"Error getting SSL metrics for {domain}: {e}")
                 cert_info["error"] = str(e)
-                self.logger.error(f"Error getting SSL metrics for {path}: {e}")
-                
+
             results.append(cert_info)
         return results
 
@@ -898,6 +894,12 @@ class ServerAgent:
             if set(new_config["monitored_directories"]) != set(self.config.get("monitored_directories", [])):
                 self.logger.info(f"Updating monitored_directories to: {new_config['monitored_directories']}")
                 self.config["monitored_directories"] = new_config["monitored_directories"]
+                changed = True
+
+        if "monitored_ssl_certs" in new_config:
+            if new_config["monitored_ssl_certs"] != self.config.get("monitored_ssl_certs", []):
+                self.logger.info(f"Updating monitored_ssl_certs to: {new_config['monitored_ssl_certs']}")
+                self.config["monitored_ssl_certs"] = new_config["monitored_ssl_certs"]
                 changed = True
         
         if changed:

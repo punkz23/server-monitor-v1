@@ -1,0 +1,125 @@
+{
+  "agent_version": "1.1.0-light",
+  "install_path": "serverwatch-agent",
+  "service_name": "serverwatch-agent",
+  "port": 8001,
+  "log_level": "INFO",
+  "metrics_interval": 30,
+  "heartbeat_interval": 60,
+  "ssh_port": 22,
+  "ssh_timeout": 30,
+  "servers": [
+    {
+      "hostname": "192.168.253.31",
+      "username": "ic1",
+      "password": "server",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "ic-1-192-168-253-80",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.253.5",
+      "username": "ho-db1-assistant",
+      "password": "R$UWNhtZi&Ah",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "monsoon-bcl-node10-192-168-253-5",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.253.9",
+      "username": "ho-db2-assistant",
+      "password": "hJ4S*mm5j%zi",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "hodbserver-192-168-253-9",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.253.15",
+      "username": "w1-assistant",
+      "password": "hIkLM#X5x1sjwIrM",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "w1-192-168-253-15",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.253.7",
+      "username": "ho-w1-assistant",
+      "password": "PB7hS5jNEhLxvjZN",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "ho-w1-192-168-253-7",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.5",
+      "username": "s1-assistant",
+      "password": "K%HyWy3qjXLbUet0",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "sycamore-mnl-node0-192-168-254-5",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.19",
+      "username": "online_backup-assistant",
+      "password": "UeAvfTu8oBG4",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "onlinebookingbackup-192-168-254-19",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.13",
+      "username": "w4-assistant",
+      "password": "O6G1Amvos0icqGRC",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "onlinebooking-192-168-254-13",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.15",
+      "username": "w5-assistant",
+      "password": "u?gd3MeRUD0z",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "sycamore-mnl-node4-192-168-254-15",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.17",
+      "username": "db3-assistant",
+      "password": "c%WCloNUVkjX",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "sycamore-mnl-node5-192-168-254-17",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.12",
+      "username": "w3-assistant",
+      "password": "fodD@IW8LXtttbrc",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "w3-h310m-h-2-0-192-168-254-12",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.10",
+      "username": "w2-assistant",
+      "password": "q84NYr5TbZGi6vJ5",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "mnl-web-server-#2-192-168-254-10",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.50",
+      "username": "ws3-assistant",
+      "password": "6c$7TpzjzYpTpbDp",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "webserver3-192-168-254-50",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.7",
+      "username": "hp44k6q2-assistant",
+      "password": "Jed9TIYYlwHWl5eu",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "mnl-web-server-main-192-168-254-7",
+      "start_service": true
+    }
+  ]
+}

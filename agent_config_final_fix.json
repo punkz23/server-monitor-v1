@@ -1,0 +1,21 @@
+{
+  "agent_version": "1.1.0-light",
+  "install_path": "serverwatch-agent",
+  "service_name": "serverwatch-agent",
+  "port": 8001,
+  "log_level": "INFO",
+  "metrics_interval": 30,
+  "heartbeat_interval": 60,
+  "ssh_port": 22,
+  "ssh_timeout": 60,
+  "servers": [
+    {
+      "hostname": "192.168.254.50",
+      "username": "ws3-assistant",
+      "password": "6c$7TpzjzYpTpbDp",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "webserver3-192-168-254-50",
+      "start_service": true
+    }
+  ]
+}

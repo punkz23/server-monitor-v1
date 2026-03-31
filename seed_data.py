@@ -8,9 +8,9 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'serverwatch.settings')
 django.setup()
 
 from monitor.models import Server as MonitorServer
-from projects_management.models import Project, Server as ProjectServer
+from projects_management.models import Project, Server as ProjectServer, PullRequest
 
-GITHUB_TOKEN = "GITHUB_TOKEN_HERE"
+GITHUB_TOKEN = "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"
 
 def add_server_and_projects(name, ip, location, username, password, projects_data):
     # 1. Add to MonitorServer if doesn't exist
@@ -61,6 +61,11 @@ def add_server_and_projects(name, ip, location, username, password, projects_dat
             print(f"    Linked {proj_name} to {ip} at {directory}")
         else:
             print(f"    Link for {proj_name} at {ip}:{directory} already exists.")
+
+        # 3. Sync real pull requests from GitHub
+        print(f"    Syncing real pull requests for {proj_name} from GitHub...")
+        from projects_management.github_service import github_sync_service
+        github_sync_service.sync_pull_requests(project)
 
 def main():
     data = [

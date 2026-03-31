@@ -1,0 +1,72 @@
+[
+  {
+    "hostname": "192.168.253.31",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.253.5",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.253.9",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.253.15",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.253.7",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.5",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.19",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.13",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.15",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.17",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.12",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.10",
+    "has_pip": false,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.50",
+    "has_pip": true,
+    "has_venv": true
+  },
+  {
+    "hostname": "192.168.254.7",
+    "has_pip": false,
+    "has_venv": true
+  }
+]

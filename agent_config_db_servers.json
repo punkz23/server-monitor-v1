@@ -1,0 +1,61 @@
+{
+  "agent_version": "1.1.0-light",
+  "install_path": "serverwatch-agent",
+  "service_name": "serverwatch-agent",
+  "port": 8001,
+  "log_level": "INFO",
+  "metrics_interval": 30,
+  "heartbeat_interval": 60,
+  "ssh_port": 22,
+  "ssh_timeout": 60,
+  "servers": [
+    {
+      "hostname": "192.168.253.9",
+      "username": "ho-db2-assistant",
+      "password": "hJ4S*mm5j%zi",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "hodbserver-192-168-253-9",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.253.5",
+      "username": "ho-db1-assistant",
+      "password": "R$UWNhtZi&Ah",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "monsoon-bcl-node10-192-168-253-5",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.5",
+      "username": "s1-assistant",
+      "password": "K%HyWy3qjXLbUet0",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "sycamore-mnl-node0-192-168-254-5",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.15",
+      "username": "w5-assistant",
+      "password": "u?gd3MeRUD0z",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "sycamore-mnl-node4-192-168-254-15",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.17",
+      "username": "db3-assistant",
+      "password": "c%WCloNUVkjX",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "sycamore-mnl-node5-192-168-254-17",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.254.50",
+      "username": "ws3-assistant",
+      "password": "6c$7TpzjzYpTpbDp",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "webserver3-192-168-254-50",
+      "start_service": true
+    }
+  ]
+}

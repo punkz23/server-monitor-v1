@@ -80,15 +80,23 @@ def agent_heartbeat(request):
         
         logger.info(f"Heartbeat received from {server.name} ({server.ip_address})")
         
-        return JsonResponse({
-            'status': 'success',
-            'server_id': server.id,
-            'timestamp': timezone.now().isoformat(),
-            'config': {
-                'watch_directory': server.watch_directory,
-                'monitored_directories': server.monitored_directories.split(',') if server.monitored_directories else []
+        return JsonResponse(
+            {
+                'status': 'success',
+                'server_id': server.id,
+                'timestamp': timezone.now().isoformat(),
+                'config': {
+                    'watch_directory': server.watch_directory,
+                    'monitored_directories': [d.strip() for d in server.monitored_directories.split(',') if d.strip()] if server.monitored_directories else [],
+                    'monitored_ssl_certs': [
+                        {
+                            'domain': cert.domain,
+                            'skip_ssl_verification': cert.server.skip_ssl_verification
+                        } for cert in server.ssl_certificates_list.filter(enabled=True, server=server)
+                    ]
+                }
             }
-        })
+        )
         
     except json.JSONDecodeError:
         return JsonResponse(
@@ -215,15 +223,23 @@ def agent_metrics(request):
         
         logger.info(f"Metrics received from {server.name} ({server.ip_address})")
         
-        return JsonResponse({
-            'status': 'success',
-            'server_id': server.id,
-            'timestamp': timezone.now().isoformat(),
-            'config': {
-                'watch_directory': server.watch_directory,
-                'monitored_directories': server.monitored_directories.split(',') if server.monitored_directories else []
+        return JsonResponse(
+            {
+                'status': 'success',
+                'server_id': server.id,
+                'timestamp': timezone.now().isoformat(),
+                'config': {
+                    'watch_directory': server.watch_directory,
+                    'monitored_directories': [d.strip() for d in server.monitored_directories.split(',') if d.strip()] if server.monitored_directories else [],
+                    'monitored_ssl_certs': [
+                        {
+                            'domain': cert.domain,
+                            'skip_ssl_verification': cert.server.skip_ssl_verification
+                        } for cert in server.ssl_certificates_list.filter(enabled=True, server=server)
+                    ]
+                }
             }
-        })
+        )
         
     except json.JSONDecodeError:
         return JsonResponse(

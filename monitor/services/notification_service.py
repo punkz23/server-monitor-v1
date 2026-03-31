@@ -23,6 +23,33 @@ class EmailChannel(NotificationChannel):
             logger.error(f"Failed to send email: {e}")
             return False
 
+class TelegramChannel(NotificationChannel):
+    """Telegram bot notification channel."""
+    def send(self, recipient: str, subject: str, message: str) -> bool:
+        bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
+        chat_id = getattr(settings, 'TELEGRAM_CHAT_ID', None)
+        
+        if not bot_token or not chat_id:
+            logger.warning("Telegram configuration missing. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID.")
+            return False
+
+        url = f"https://api.telegram.com/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": f"<b>{subject}</b>\n\n{message}",
+            "parse_mode": "HTML"
+        }
+
+        try:
+            import requests
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            logger.info(f"Telegram notification sent successfully.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send Telegram notification: {e}")
+            return False
+
 class ConsoleChannel(NotificationChannel):
     """Console notification channel for development/debugging."""
     def send(self, recipient: str, subject: str, message: str) -> bool:
@@ -49,6 +76,7 @@ class NotificationService:
             'email': EmailChannel(),
             'console': ConsoleChannel(),
             'push': PushNotificationChannel(),
+            'telegram': TelegramChannel(),
         }
 
     def send_notification(self, channels: List[str], recipient: str, subject: str, message: str):

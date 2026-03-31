@@ -1,0 +1,29 @@
+{
+  "agent_version": "1.1.0-light",
+  "install_path": "serverwatch-agent",
+  "service_name": "serverwatch-agent",
+  "port": 8001,
+  "log_level": "INFO",
+  "metrics_interval": 30,
+  "heartbeat_interval": 60,
+  "ssh_port": 22,
+  "ssh_timeout": 60,
+  "servers": [
+    {
+      "hostname": "192.168.253.15",
+      "username": "w1-assistant",
+      "password": "hIkLM#X5x1sjwIrM",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "w1-192-168-253-15",
+      "start_service": true
+    },
+    {
+      "hostname": "192.168.253.7",
+      "username": "ho-w1-assistant",
+      "password": "PB7hS5jNEhLxvjZN",
+      "server_url": "http://192.168.253.31:8001",
+      "agent_token": "ho-w1-192-168-253-7",
+      "start_service": true
+    }
+  ]
+}
